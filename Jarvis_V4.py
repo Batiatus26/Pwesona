@@ -56,6 +56,18 @@ MUSIC_FULL_SECS = 20
 MUSIC_FADE_SECS = 3
 WEATHER_CITY    = "Toppenstedt"
 
+# ── SSH / Claude Code bridge ────────────────────────────────
+SSH_HOST      = ""          # e.g. "192.168.1.100"
+SSH_PORT      = 22
+SSH_USER      = ""          # e.g. "ubuntu"
+SSH_KEY_PATH  = ""          # e.g. r"C:\Users\Gökay\.ssh\id_rsa" — leave "" for password
+SSH_PASSWORD  = ""          # leave "" when using key auth
+SSH_CLAUDE    = "claude"    # path to claude CLI on remote machine
+
+# Voice prefixes that route to Claude Code instead of Gemini
+# (speech recognition won't produce punctuation, so no colons)
+BRIDGE_TRIGGERS = ("code ", "claude code ", "send to claude ", "hey claude ")
+
 SYSTEM_PROMPT = """You are J.A.R.V.I.S. (Just A Rather Very Intelligent System),
 the AI assistant of Tony Stark / Iron Man.
 - Polite, efficient, slightly witty British butler tone
@@ -123,79 +135,96 @@ def speak_async(text):
     return t
 
 # ══════════════════════════════════════════════════════════════
-#  MÜZİK  — webm'i ffmpeg ile mp3'e dönüştür, yoksa direkt çal
+#  MÜZİK  — webm → WAV (ffmpeg), pygame.mixer.music + fadeout()
 # ══════════════════════════════════════════════════════════════
-_music_mp3 = None
+_music_file = None   # path to the playable audio file
 
 def prepare_music():
-    """webm → mp3 dönüşümü (ffmpeg varsa). Yoksa webm ile devam."""
-    global _music_mp3
-    for name in [INTRO_FILE,"intro.mp3","intro.wav","intro.webm"]:
-        if os.path.exists(name):
-            if name.endswith(".mp3") or name.endswith(".wav"):
-                _music_mp3 = name
-                return
-            # webm/diğer → ffmpeg ile mp3'e çevir
-            out = "intro_converted.mp3"
-            if os.path.exists(out):
-                _music_mp3 = out
-                return
-            try:
-                import subprocess
-                r = subprocess.run(
-                    ["ffmpeg","-y","-i",name,"-q:a","2",out],
-                    capture_output=True, timeout=30
-                )
-                if r.returncode == 0:
-                    _music_mp3 = out
-                    print("[JARVIS] Müzik mp3'e dönüştürüldü.")
-                    return
-            except Exception:
-                pass
-            # ffmpeg yoksa webm ile dene
-            _music_mp3 = name
+    """Convert intro.webm → WAV via ffmpeg for reliable pygame playback.
+    Falls back to mp3 then raw source if ffmpeg is unavailable."""
+    global _music_file
+    import subprocess
+
+    for name in [INTRO_FILE, "intro.mp3", "intro.wav", "intro.webm"]:
+        if not os.path.exists(name):
+            continue
+
+        if name.endswith(".wav"):
+            _music_file = name
             return
-    _music_mp3 = None
+
+        # Prefer WAV — pygame.mixer handles it perfectly for smooth fadeout
+        out_wav = "intro_converted.wav"
+        if os.path.exists(out_wav):
+            _music_file = out_wav
+            return
+        try:
+            r = subprocess.run(
+                ["ffmpeg", "-y", "-i", name,
+                 "-ar", "44100", "-ac", "2", "-sample_fmt", "s16", out_wav],
+                capture_output=True, timeout=30
+            )
+            if r.returncode == 0:
+                _music_file = out_wav
+                print("[JARVIS] Müzik WAV'a dönüştürüldü.")
+                return
+        except FileNotFoundError:
+            print("[JARVIS] ffmpeg bulunamadı — mp3 denenecek.")
+        except Exception as e:
+            print(f"[JARVIS] ffmpeg hatası: {e}")
+
+        # ffmpeg failed — try mp3 fallback
+        out_mp3 = "intro_converted.mp3"
+        if os.path.exists(out_mp3):
+            _music_file = out_mp3
+            return
+        try:
+            r = subprocess.run(
+                ["ffmpeg", "-y", "-i", name, "-q:a", "2", out_mp3],
+                capture_output=True, timeout=30
+            )
+            if r.returncode == 0:
+                _music_file = out_mp3
+                print("[JARVIS] Müzik mp3'e dönüştürüldü.")
+                return
+        except Exception:
+            pass
+
+        # Last resort: play source file directly (webm may work on some setups)
+        _music_file = name
+        return
+
+    _music_file = None
 
 def start_music():
-    if not _music_mp3:
+    if not _music_file:
         print("[JARVIS] Müzik dosyası yok.")
         return
     if PYGAME_OK:
         try:
-            pygame.mixer.pre_init(44100,-16,2,4096)
+            pygame.mixer.pre_init(44100, -16, 2, 4096)
             pygame.mixer.init()
-            pygame.mixer.music.load(_music_mp3)
+            pygame.mixer.music.load(_music_file)
             pygame.mixer.music.set_volume(1.0)
             pygame.mixer.music.play()
-            print(f"[JARVIS] Müzik başladı: {_music_mp3}")
+            print(f"[JARVIS] Müzik başladı: {_music_file}")
             return
         except Exception as e:
             print(f"[JARVIS] Pygame hata: {e}")
     try:
-        os.startfile(os.path.abspath(_music_mp3))
+        os.startfile(os.path.abspath(_music_file))
     except Exception:
         pass
 
 def fadeout_music_and_speak(app, report):
-    """20sn tam ses → smooth fade → Jarvis konuşur."""
+    """Full-volume playback → smooth pygame fadeout → Jarvis speaks."""
     print(f"[JARVIS] {MUSIC_FULL_SECS}sn müzik...")
     time.sleep(MUSIC_FULL_SECS)
 
     if PYGAME_OK and pygame.mixer.get_init() and pygame.mixer.music.get_busy():
-        steps = 40
         print("[JARVIS] Fade out...")
-        for i in range(steps):
-            vol = 1.0 - (i+1)/steps
-            try:
-                pygame.mixer.music.set_volume(max(0.0, vol))
-            except Exception:
-                break
-            time.sleep(MUSIC_FADE_SECS / steps)
-        try:
-            pygame.mixer.music.stop()
-        except Exception:
-            pass
+        pygame.mixer.music.fadeout(int(MUSIC_FADE_SECS * 1000))
+        time.sleep(MUSIC_FADE_SECS + 0.15)   # wait for fadeout to finish
     else:
         time.sleep(MUSIC_FADE_SECS)
 
@@ -292,6 +321,76 @@ _alexa_devices = [
     {"name":"TV",          "type":"SWITCH", "state":"OFF", "val":"--"},
     {"name":"SPEAKER",     "type":"AUDIO",  "state":"ON",  "val":"VOL 40"},
 ]
+
+# ══════════════════════════════════════════════════════════════
+#  SSH / CLAUDE CODE BRIDGE
+# ══════════════════════════════════════════════════════════════
+class ClaudeCodeBridge:
+    def __init__(self):
+        self._client   = None
+        self._lock     = threading.Lock()
+        self.status    = "OFFLINE"
+        self.last_task = "—"
+
+    def _connect(self):
+        try:
+            import paramiko
+        except ImportError:
+            self.status = "NO PARAMIKO"
+            return False, "Install paramiko: pip install paramiko"
+        if not SSH_HOST or not SSH_USER:
+            self.status = "NOT CONFIGURED"
+            return False, "Set SSH_HOST and SSH_USER in config."
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            kwargs = dict(hostname=SSH_HOST, port=SSH_PORT,
+                          username=SSH_USER, timeout=12)
+            if SSH_KEY_PATH:
+                kwargs["key_filename"] = SSH_KEY_PATH
+            elif SSH_PASSWORD:
+                kwargs["password"] = SSH_PASSWORD
+            client.connect(**kwargs)
+            self._client = client
+            self.status  = "ONLINE"
+            return True, "Connected"
+        except Exception as e:
+            self.status = "ERROR"
+            return False, str(e)
+
+    def run(self, prompt, timeout=90):
+        """Send a coding task to Claude Code on the remote machine.
+        Returns (success: bool, output: str)."""
+        with self._lock:
+            if not SSH_HOST or not SSH_USER:
+                return False, "SSH not configured — set SSH_HOST and SSH_USER."
+            if self._client is None:
+                ok, msg = self._connect()
+                if not ok:
+                    return False, f"SSH connection failed: {msg}"
+            try:
+                safe = prompt.replace("\\", "\\\\").replace("'", "'\\''")
+                cmd  = f"{SSH_CLAUDE} --print '{safe}'"
+                _, stdout, stderr = self._client.exec_command(cmd, timeout=timeout)
+                out = stdout.read().decode("utf-8", errors="replace").strip()
+                err = stderr.read().decode("utf-8", errors="replace").strip()
+                self.last_task = prompt[:40]
+                if not out and err:
+                    return False, err[:600]
+                return True, out or "(no output)"
+            except Exception as e:
+                self._client = None
+                self.status  = "DISCONNECTED"
+                return False, str(e)
+
+    def disconnect(self):
+        if self._client:
+            try: self._client.close()
+            except Exception: pass
+            self._client = None
+        self.status = "OFFLINE"
+
+_bridge = ClaudeCodeBridge()
 
 # ══════════════════════════════════════════════════════════════
 #  TAKVİM / HATIRLATICI
@@ -399,10 +498,14 @@ class JarvisHUD(ctk.CTk):
         self._update_panels()
         self._animate()
 
+        # Ensure the borderless window receives keyboard events immediately
+        self.focus_force()
+
         threading.Thread(target=self._boot_sequence, daemon=True).start()
 
     def _exit(self):
         self.mic.stop()
+        _bridge.disconnect()
         self.destroy()
         sys.exit(0)
 
@@ -595,7 +698,7 @@ class JarvisHUD(ctk.CTk):
             ("TIMEZONE",  "CET +1"),
             ("THREAT",    "LOW"),
             ("LANGUAGE",  "EN / TR"),
-            ("AI ENGINE", "GEMINI 1.5"),
+            ("AI ENGINE", "GEMINI 2.5"),
             ("VOICE",     "EN-GB RYAN"),
             ("AGENTS",    "6 / 6 ONLINE"),
         ]
@@ -606,6 +709,77 @@ class JarvisHUD(ctk.CTk):
                      font=("Courier New",8)).pack(side="left")
             tk.Label(row, text=v, bg=self.C_PANEL, fg=self.C_CYAN,
                      font=("Courier New",8,"bold")).pack(side="right")
+
+        # CLAUDE CODE BRIDGE
+        self._build_bridge_panel(p)
+
+    def _build_bridge_panel(self, parent):
+        self._sec(parent, "CLAUDE CODE  —  SSH BRIDGE")
+        rows = [
+            ("STATUS", "—"),
+            ("HOST",   SSH_HOST or "not configured"),
+            ("LAST",   "—"),
+        ]
+        self._bridge_lbls = {}
+        for k, v in rows:
+            row = tk.Frame(parent, bg=self.C_PANEL)
+            row.pack(fill="x", padx=12, pady=2)
+            tk.Label(row, text=f"{k:<8}", bg=self.C_PANEL, fg=self.C_CYAN3,
+                     font=("Courier New",8)).pack(side="left")
+            lbl = tk.Label(row, text=v, bg=self.C_PANEL, fg=self.C_CYAN,
+                           font=("Courier New",8,"bold"))
+            lbl.pack(side="right")
+            self._bridge_lbls[k] = lbl
+        self._refresh_bridge_panel()
+
+    def _refresh_bridge_panel(self):
+        st  = _bridge.status
+        clr = {
+            "ONLINE":         self.C_GREEN,
+            "OFFLINE":        self.C_CYAN3,
+            "DISCONNECTED":   self.C_ORANGE,
+            "ERROR":          self.C_RED,
+            "NOT CONFIGURED": self.C_ORANGE,
+            "NO PARAMIKO":    self.C_RED,
+        }.get(st, self.C_CYAN2)
+        try:
+            self._bridge_lbls["STATUS"].configure(text=st, fg=clr)
+            self._bridge_lbls["LAST"].configure(text=_bridge.last_task[:22])
+        except Exception:
+            pass
+        self.after(3000, self._refresh_bridge_panel)
+
+    def _handle_bridge_command(self, task):
+        """Run Claude Code task over SSH in a background thread."""
+        def _run():
+            self._speaking = True
+            self.set_status("CLAUDE CODE")
+            self.add_log(f"BRIDGE → {task[:42]}", "cmd")
+            self.add_conversation("SIR→CODE", task)
+            self.set_speech("Connecting to Claude Code, Sir...")
+            speak_async("Sending your task to Claude Code, Sir. Stand by.").join()
+
+            ok, result = _bridge.run(task)
+
+            if ok:
+                first_line = result.split("\n")[0][:160]
+                self.add_log(f"CLAUDE: {first_line[:42]}", "ok")
+                self.add_conversation("CLAUDE", result[:200])
+                self.set_speech(first_line)
+                summary = first_line[:150] if first_line else "Task completed, Sir."
+                speak_text = f"Claude Code has responded, Sir. {summary}"
+            else:
+                self.add_log(f"BRIDGE ERR: {result[:40]}", "alert")
+                self.add_conversation("BRIDGE", f"ERROR: {result[:120]}")
+                self.set_speech(f"Bridge error: {result[:80]}")
+                speak_text = f"I'm sorry, Sir. The bridge encountered an error. {result[:100]}"
+
+            speak_async(speak_text).join()
+            self._speaking = False
+            self.set_status("LISTENING")
+            self.set_speech("Awaiting your command, Sir.")
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def _build_calendar(self):
         now = datetime.datetime.now()
@@ -1025,6 +1199,17 @@ class JarvisHUD(ctk.CTk):
         ).start()
 
     def _on_command(self, text):
+        lower = text.lower().strip()
+
+        # Route to Claude Code bridge if text starts with a trigger prefix
+        for prefix in BRIDGE_TRIGGERS:
+            if lower.startswith(prefix):
+                task = text[len(prefix):].strip()
+                if task:
+                    self._handle_bridge_command(task)
+                    return
+
+        # Default: Gemini
         self._speaking = True
         self.set_status("PROCESSING")
         self.add_log(f"SIR: {text[:45]}", "cmd")
