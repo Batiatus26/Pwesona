@@ -57,12 +57,12 @@ MUSIC_FADE_SECS = 3
 WEATHER_CITY    = "Toppenstedt"
 
 # ── SSH / Claude Code bridge ────────────────────────────────
-SSH_HOST      = ""          # e.g. "192.168.1.100"
-SSH_PORT      = 22
-SSH_USER      = ""          # e.g. "ubuntu"
-SSH_KEY_PATH  = ""          # e.g. r"C:\Users\Gökay\.ssh\id_rsa" — leave "" for password
-SSH_PASSWORD  = ""          # leave "" when using key auth
-SSH_CLAUDE    = "claude"    # path to claude CLI on remote machine
+SSH_HOST     = "192.168.178.22"
+SSH_PORT     = 22
+SSH_USER     = "Gökay"
+SSH_KEY_PATH = ""
+SSH_PASSWORD = "1208Gy1980"
+SSH_CLAUDE   = "C:\\Users\\Gökay\\AppData\\Roaming\\npm\\claude.cmd"
 
 # Voice prefixes that route to Claude Code instead of Gemini
 # (speech recognition won't produce punctuation, so no colons)
