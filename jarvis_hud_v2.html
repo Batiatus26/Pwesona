@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>J.A.R.V.I.S OS — MARK III</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #070a0e;
+  --panel:    #0a0f14;
+  --cyan:     #00d4ff;
+  --cyan2:    #0099bb;
+  --cyan3:    #003d55;
+  --cyan4:    #001a25;
+  --blue:     #1a6aff;
+  --blue2:    #0044cc;
+  --orange:   #ff6a00;
+  --red:      #ff2244;
+  --green:    #00ff88;
+  --white:    #cce8ff;
+  --dim:      #2a4a5a;
+  --border:   #0d2535;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--white);
+  font-family:'Share Tech Mono',monospace;
+  width:100vw;height:100vh;
+  overflow:hidden;
+  cursor:crosshair;
+  user-select:none;
+}
+
+/* ── SCANLINES ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* ══════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════ */
+.hud{
+  display:grid;
+  grid-template-columns:220px 1fr 80px;
+  grid-template-rows:72px 1fr 120px;
+  width:100vw;height:100vh;
+  gap:0;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  grid-column:1/-1;
+  display:flex;align-items:center;
+  background:linear-gradient(to bottom,#0d1820,#070a0e);
+  border-bottom:1px solid var(--border);
+  padding:0 16px;gap:12px;
+  position:relative;z-index:10;
+}
+.top-logo{
+  display:flex;align-items:center;gap:12px;
+  padding-right:16px;
+  border-right:1px solid var(--border);
+}
+.logo-circle{
+  width:48px;height:48px;border-radius:50%;
+  border:2px solid var(--cyan2);
+  background:radial-gradient(circle,#001e2e,#000810);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  animation:logo-spin 8s linear infinite;
+}
+.logo-circle::before{
+  content:'';position:absolute;inset:-4px;
+  border-radius:50%;
+  border:1px solid transparent;
+  border-top-color:var(--cyan);
+  border-right-color:var(--cyan2);
+  animation:logo-spin 3s linear infinite;
+}
+@keyframes logo-spin{to{transform:rotate(360deg);}}
+.logo-circle svg{animation:logo-spin 8s linear infinite reverse;}
+.logo-text{
+  font-family:'Orbitron',sans-serif;
+  font-size:13px;font-weight:700;
+  color:var(--cyan);
+  text-shadow:0 0 15px var(--cyan);
+  letter-spacing:2px;
+}
+.logo-sub{font-size:9px;color:var(--cyan3);letter-spacing:3px;margin-top:2px;}
+
+/* User card */
+.user-card{
+  display:flex;align-items:center;gap:10px;
+  padding:0 16px;
+  border-right:1px solid var(--border);
+}
+.user-avatar{
+  width:40px;height:40px;border-radius:4px;
+  border:1px solid var(--cyan2);
+  background:linear-gradient(135deg,#1a3a4a,#0a1a24);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--cyan);
+}
+.user-name{font-size:11px;color:var(--white);letter-spacing:2px;font-weight:600;}
+.user-ver{font-size:9px;color:var(--cyan3);margin-top:2px;letter-spacing:1px;}
+
+/* Top apps */
+.top-apps{
+  display:flex;align-items:center;gap:6px;
+  flex:1;justify-content:center;
+}
+.app-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;
+  background:rgba(0,212,255,0.05);
+  border:1px solid var(--border);
+  border-radius:3px;
+  font-size:10px;color:var(--dim);
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.app-btn:hover{background:rgba(0,212,255,0.12);border-color:var(--cyan2);color:var(--white);}
+.app-btn .app-icon{font-size:14px;}
+
+/* Date block */
+.date-block{
+  text-align:right;padding-left:16px;
+  border-left:1px solid var(--border);
+}
+.date-day{
+  font-family:'Orbitron',sans-serif;
+  font-size:32px;font-weight:900;
+  color:var(--white);line-height:1;
+  text-shadow:0 0 20px rgba(0,212,255,0.3);
+}
+.date-month{
+  font-size:10px;letter-spacing:3px;
+  color:var(--cyan);
+  background:var(--blue2);
+  padding:1px 6px;margin-top:2px;
+  display:inline-block;
+}
+.date-dow{font-size:9px;color:var(--dim);letter-spacing:2px;margin-top:2px;}
+
+/* ── LEFT PANEL ── */
+.left{
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+}
+.left::before{
+  content:'DEVICE CONTROL';
+  position:absolute;left:-22px;top:50%;
+  transform:translateY(-50%) rotate(-90deg);
+  font-size:8px;letter-spacing:4px;
+  color:var(--cyan3);white-space:nowrap;
+}
+
+.app-list{padding:8px 12px 8px 28px;}
+.app-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;margin-bottom:4px;
+  background:linear-gradient(to right,rgba(0,212,255,0.06),transparent);
+  border:1px solid var(--border);
+  border-left:2px solid var(--cyan3);
+  cursor:pointer;
+  transition:all 0.2s;
+  position:relative;
+}
+.app-item::before{
+  content:'';position:absolute;left:-2px;top:0;bottom:0;
+  width:2px;background:var(--cyan);
+  transform:scaleY(0);transform-origin:bottom;
+  transition:transform 0.2s;
+}
+.app-item:hover::before{transform:scaleY(1);}
+.app-item:hover{background:linear-gradient(to right,rgba(0,212,255,0.14),transparent);border-color:var(--cyan2);}
+.app-icon-img{
+  width:24px;height:24px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;
+}
+.app-name{font-size:11px;color:var(--white);letter-spacing:1px;}
+.app-plus{
+  position:absolute;left:-12px;
+  font-size:10px;color:var(--cyan3);
+}
+
+/* ── CENTER ── */
+.center{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+
+/* Main radar canvas */
+#radar{position:absolute;inset:0;width:100%;height:100%;}
+
+/* Clock overlay */
+.clock-overlay{
+  position:absolute;
+  left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  pointer-events:none;
+}
+.clock-time{
+  font-family:'Orbitron',sans-serif;
+  font-size:22px;font-weight:600;
+  color:var(--white);
+  text-shadow:0 0 20px rgba(0,212,255,0.5);
+  letter-spacing:3px;
+}
+.clock-ampm{font-size:10px;color:var(--cyan3);letter-spacing:2px;margin-top:2px;}
+
+/* Quick links ring */
+.quick-links{
+  position:absolute;
+  right:calc(50% - 280px);top:50%;
+  transform:translateY(-50%);
+}
+.qlink{
+  display:flex;align-items:center;gap:6px;
+  margin:6px 0;
+  font-size:10px;color:var(--dim);
+  cursor:pointer;transition:color 0.2s;
+}
+.qlink:hover{color:var(--cyan);}
+.qlink::before{content:'◎';color:var(--cyan3);margin-right:2px;}
+
+/* Folder buttons */
+.folders{
+  position:absolute;
+  bottom:20px;left:50%;
+  transform:translateX(-50%);
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:6px;width:400px;
+}
+.folder-btn{
+  padding:6px 18px;
+  background:rgba(10,20,30,0.9);
+  border:1px solid var(--cyan3);
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px;color:var(--cyan2);
+  letter-spacing:2px;cursor:pointer;
+  transition:all 0.2s;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+}
+.folder-btn:hover{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--white);}
+
+/* Notes panel */
+.notes-panel{
+  position:absolute;right:20px;top:20px;
+  width:220px;
+  background:rgba(10,20,30,0.85);
+  border:1px solid var(--border);
+  padding:12px;
+}
+.notes-title{
+  font-size:11px;color:var(--white);
+  margin-bottom:8px;letter-spacing:2px;
+  display:flex;align-items:center;gap:6px;
+}
+.notes-title::before{content:'☑';color:var(--cyan);}
+.note-item{
+  font-size:9px;color:var(--dim);
+  margin:5px 0;padding-left:10px;
+  border-left:1px solid var(--cyan3);
+  line-height:1.4;
+}
+
+/* ── RIGHT STRIP ── */
+.right-strip{
+  background:var(--panel);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  align-items:center;
+  padding:8px 4px;gap:4px;
+  position:relative;
+}
+.jarvis-letters{
+  font-family:'Orbitron',sans-serif;
+  font-size:18px;font-weight:900;
+  color:var(--blue);
+  text-shadow:0 0 15px rgba(26,106,255,0.5);
+  writing-mode:vertical-rl;
+  text-orientation:upright;
+  letter-spacing:8px;
+  flex:1;display:flex;align-items:center;justify-content:center;
+}
+.vu-meter{
+  width:18px;
+  display:flex;flex-direction:column;gap:2px;
+  padding:4px 0;
+}
+.vu-bar{
+  width:18px;height:6px;
+  background:var(--blue2);
+  border-radius:1px;
+  transition:opacity 0.1s;
+}
+
+/* ── BOTTOM BAR ── */
+.bottom{
+  grid-column:1/-1;
+  background:linear-gradient(to top,#0d1820,#070a0e);
+  border-top:1px solid var(--border);
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  padding:8px 16px;gap:16px;
+}
+
+.stat-block{border-right:1px solid var(--border);padding-right:16px;}
+.stat-block:last-child{border-right:none;}
+.stat-label{font-size:9px;color:var(--dim);letter-spacing:2px;margin-bottom:6px;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;margin:3px 0;}
+.stat-key{font-size:9px;color:var(--cyan3);}
+.stat-val{font-size:9px;color:var(--white);font-weight:600;}
+.stat-val.warn{color:var(--orange);}
+.stat-val.ok{color:var(--green);}
+
+/* Mini graph */
+.mini-graph{
+  height:30px;margin-top:4px;
+  position:relative;overflow:hidden;
+}
+.mini-graph canvas{width:100%;height:100%;}
+
+/* Bottom actions */
+.bottom-actions{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  grid-column:1/-1;
+  border-top:1px solid var(--border);
+  padding-top:8px;
+  margin-top:4px;
+}
+.action-btn{
+  padding:5px 24px;
+  background:rgba(255,34,68,0.08);
+  border:1px solid rgba(255,34,68,0.3);
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px;color:#ff6688;
+  letter-spacing:3px;cursor:pointer;
+  transition:all 0.2s;
+}
+.action-btn:hover{background:rgba(255,34,68,0.18);border-color:var(--red);color:var(--red);}
+.action-btn.safe{
+  background:rgba(0,212,255,0.05);
+  border-color:var(--border);color:var(--dim);
+}
+.action-btn.safe:hover{background:rgba(0,212,255,0.1);border-color:var(--cyan2);color:var(--white);}
+
+/* Status bottom right */
+.bottom-brand{
+  position:absolute;bottom:8px;right:16px;
+  text-align:right;
+}
+.brand-name{
+  font-family:'Orbitron',sans-serif;
+  font-size:14px;font-weight:700;
+  color:var(--dim);letter-spacing:3px;
+}
+.brand-ver{font-size:8px;color:var(--cyan3);letter-spacing:2px;margin-top:2px;}
+
+/* ── SPEECH / STATUS BAR ── */
+.speech-bar{
+  position:fixed;bottom:132px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(7,10,14,0.9);
+  border:1px solid var(--cyan3);
+  padding:6px 24px;
+  font-size:11px;color:var(--cyan);
+  letter-spacing:2px;
+  white-space:nowrap;
+  z-index:100;
+  max-width:600px;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Animated glow pulse on cyan elements */
+@keyframes glow-pulse{
+  0%,100%{text-shadow:0 0 8px var(--cyan);}
+  50%{text-shadow:0 0 20px var(--cyan),0 0 40px rgba(0,212,255,0.3);}
+}
+.logo-text{animation:glow-pulse 3s ease-in-out infinite;}
+
+/* Boot animation */
+@keyframes boot-in{
+  from{opacity:0;filter:brightness(3) blur(3px);}
+  to{opacity:1;filter:brightness(1) blur(0);}
+}
+.hud{animation:boot-in 1.8s ease-out forwards;}
+
+/* Segment flicker */
+@keyframes seg-flicker{
+  0%,98%,100%{opacity:1;}99%{opacity:0.1;}
+}
+</style>
+</head>
+<body>
+<div class="hud">
+
+  <!-- ══ TOP BAR ══ -->
+  <div class="topbar">
+    <div class="top-logo">
+      <div class="logo-circle">
+        <svg width="22" height="22" viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="8" fill="none" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <circle cx="11" cy="11" r="4" fill="none" stroke="#0099bb" stroke-width="1"/>
+          <circle cx="11" cy="11" r="2" fill="#00d4ff"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">JARVIS OS</div>
+        <div class="logo-sub">Ver MARK III</div>
+      </div>
+    </div>
+
+    <div class="user-card">
+      <div class="user-avatar">👤</div>
+      <div>
+        <div class="user-name">STARK</div>
+        <div class="user-ver">AUTHORIZED USER</div>
+      </div>
+    </div>
+
+    <div class="top-apps">
+      <div class="app-btn"><span class="app-icon">🎵</span>Spotify</div>
+      <div class="app-btn"><span class="app-icon">💬</span>Discord</div>
+      <div class="app-btn"><span class="app-icon">📱</span>WhatsApp</div>
+      <div class="app-btn"><span class="app-icon">✈️</span>Telegram</div>
+      <div class="app-btn"><span class="app-icon">🌐</span>Chrome</div>
+      <div class="app-btn"><span class="app-icon">📷</span>Camera</div>
+    </div>
+
+    <div class="date-block">
+      <div class="date-day" id="day-num">--</div>
+      <div class="date-month" id="month-name">---</div>
+      <div class="date-dow" id="dow-name">-------</div>
+    </div>
+  </div>
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="left">
+    <div class="app-list">
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">🌐</div><span class="app-name">Chrome</span></div>
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">🤖</div><span class="app-name">Android Studio</span></div>
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">💻</div><span class="app-name">Visual Studio</span></div>
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">🐍</div><span class="app-name">PyCharm</span></div>
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">⚡</div><span class="app-name">Claude Code</span></div>
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">🏠</div><span class="app-name">Smart Home</span></div>
+      <div class="app-item"><span class="app-plus">+</span><div class="app-icon-img">🧠</div><span class="app-name">JARVIS A.I.</span></div>
+    </div>
+  </div>
+
+  <!-- ══ CENTER ══ -->
+  <div class="center">
+    <canvas id="radar"></canvas>
+
+    <!-- Clock -->
+    <div class="clock-overlay">
+      <div class="clock-time" id="clock-time">--:--</div>
+      <div class="clock-ampm" id="clock-ampm">--</div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="quick-links">
+      <div class="qlink">Gmail</div>
+      <div class="qlink">Dictionary</div>
+      <div class="qlink">LinkedIn</div>
+      <div class="qlink">GitHub</div>
+      <div class="qlink">Claude Code</div>
+      <div class="qlink">Google</div>
+    </div>
+
+    <!-- Notes -->
+    <div class="notes-panel">
+      <div class="notes-title">Notes</div>
+      <div class="note-item">Monitor smart home devices</div>
+      <div class="note-item">Sync Claude Code bridge</div>
+      <div class="note-item">Update Alexa integration</div>
+      <div class="note-item">Run network security scan</div>
+    </div>
+
+    <!-- Folders -->
+    <div class="folders">
+      <div class="folder-btn">Desktop</div>
+      <div class="folder-btn">Pictures</div>
+      <div class="folder-btn">Downloads</div>
+      <div class="folder-btn">Games</div>
+      <div class="folder-btn">Movies</div>
+      <div class="folder-btn">Series</div>
+      <div class="folder-btn">This PC</div>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT STRIP ══ -->
+  <div class="right-strip">
+    <div class="vu-meter" id="vu-top"></div>
+    <div class="jarvis-letters">JARVIS</div>
+    <div class="vu-meter" id="vu-bot"></div>
+  </div>
+
+  <!-- ══ BOTTOM ══ -->
+  <div class="bottom">
+    <!-- Network -->
+    <div class="stat-block">
+      <div class="stat-label">NETWORK</div>
+      <div class="stat-row"><span class="stat-key">SSID</span><span class="stat-val" id="ssid">STARK-NET</span></div>
+      <div class="stat-row"><span class="stat-key">IP LAN</span><span class="stat-val">192.168.1.1</span></div>
+      <div class="stat-row"><span class="stat-key">UP</span><span class="stat-val ok" id="net-up">-- KB/s</span></div>
+      <div class="stat-row"><span class="stat-key">DOWN</span><span class="stat-val ok" id="net-down">-- KB/s</span></div>
+      <div class="mini-graph"><canvas id="graph-net" height="30"></canvas></div>
+    </div>
+
+    <!-- CPU/RAM -->
+    <div class="stat-block">
+      <div class="stat-label">SYSTEM</div>
+      <div class="stat-row"><span class="stat-key">CPU</span><span class="stat-val" id="cpu-val">--%</span></div>
+      <div class="stat-row"><span class="stat-key">RAM</span><span class="stat-val warn" id="ram-val">--%</span></div>
+      <div class="stat-row"><span class="stat-key">DISK</span><span class="stat-val" id="disk-val">-- GB</span></div>
+      <div class="stat-row"><span class="stat-key">PWR</span><span class="stat-val ok">NOMINAL</span></div>
+      <div class="mini-graph"><canvas id="graph-cpu" height="30"></canvas></div>
+    </div>
+
+    <!-- Smart Home -->
+    <div class="stat-block">
+      <div class="stat-label">SMART HOME — ALEXA</div>
+      <div class="stat-row"><span class="stat-key">⬡ LIVING RM</span><span class="stat-val ok">ON  80%</span></div>
+      <div class="stat-row"><span class="stat-key">⬡ BEDROOM</span><span class="stat-val" style="color:var(--dim)">OFF</span></div>
+      <div class="stat-row"><span class="stat-key">◎ THERMO</span><span class="stat-val ok">21°C</span></div>
+      <div class="stat-row"><span class="stat-key">♪ SPEAKER</span><span class="stat-val warn">VOL 40</span></div>
+    </div>
+
+    <!-- Status / Uptime -->
+    <div class="stat-block" style="border:none;position:relative;">
+      <div class="stat-label">STATUS</div>
+      <div class="stat-row"><span class="stat-key">UPTIME</span><span class="stat-val" id="uptime">0d 0h 0m</span></div>
+      <div class="stat-row"><span class="stat-key">AGENTS</span><span class="stat-val ok">6 / 6</span></div>
+      <div class="stat-row"><span class="stat-key">AI ENGINE</span><span class="stat-val ok">ONLINE</span></div>
+      <div class="stat-row"><span class="stat-key">THREAT</span><span class="stat-val ok">LOW</span></div>
+      <div class="bottom-brand">
+        <div class="brand-name">J.A.R.V.I.S</div>
+        <div class="brand-ver">OS VERSION MK IV</div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bottom-actions" style="grid-column:1/-1">
+      <div class="action-btn safe">RESTART</div>
+      <div class="action-btn">SHUTDOWN</div>
+      <div class="action-btn safe">LOG OFF</div>
+      <div class="action-btn safe" style="color:var(--cyan2);border-color:var(--cyan3)">SLEEP MODE</div>
+    </div>
+  </div>
+</div>
+
+<!-- Speech bar -->
+<div class="speech-bar" id="speech-bar">JARVIS — AWAITING COMMAND, SIR</div>
+
+<script>
+// ══════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════
+function updateClock(){
+  const now = new Date();
+  let h = now.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock-time').textContent = `${String(h).padStart(2,'0')}:${m}`;
+  document.getElementById('clock-ampm').textContent = ampm;
+
+  const days   = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  const months = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
+                  'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  document.getElementById('day-num').textContent   = now.getDate();
+  document.getElementById('month-name').textContent = months[now.getMonth()].slice(0,3);
+  document.getElementById('dow-name').textContent   = days[now.getDay()];
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════════
+// UPTIME
+// ══════════════════════════════════════
+const startTime = Date.now();
+setInterval(()=>{
+  const s = Math.floor((Date.now()-startTime)/1000);
+  const m = Math.floor(s/60)%60;
+  const h = Math.floor(s/3600)%24;
+  const d = Math.floor(s/86400);
+  document.getElementById('uptime').textContent = `${d}d ${h}h ${m}m`;
+},10000);
+
+// ══════════════════════════════════════
+// RADAR / CENTER CANVAS
+// ══════════════════════════════════════
+const radar = document.getElementById('radar');
+const rctx  = radar.getContext('2d');
+let rw, rh, rcx, rcy, rR;
+let radarAngle = 0;
+let rotAngle   = 0;
+
+function resizeRadar(){
+  rw = radar.offsetWidth; rh = radar.offsetHeight;
+  radar.width  = rw; radar.height = rh;
+  rcx = rw/2; rcy = rh/2;
+  rR  = Math.min(rcx,rcy) - 40;
+}
+resizeRadar();
+window.addEventListener('resize', resizeRadar);
+
+function drawRadar(){
+  rctx.clearRect(0,0,rw,rh);
+  const t = Date.now()/1000;
+
+  // Grid
+  rctx.strokeStyle='#0a1820';rctx.lineWidth=1;
+  for(let i=0;i<rw;i+=50){rctx.beginPath();rctx.moveTo(i,0);rctx.lineTo(i,rh);rctx.stroke();}
+  for(let i=0;i<rh;i+=50){rctx.beginPath();rctx.moveTo(0,i);rctx.lineTo(rw,i);rctx.stroke();}
+
+  // Outer decorative rings
+  const rings = [
+    {off:0,   color:'#0d2535',w:1},
+    {off:22,  color:'#0d3040',w:1},
+    {off:40,  color:'#103a50',w:1.5},
+    {off:58,  color:'#0d2535',w:1},
+  ];
+  rings.forEach(r=>{
+    const radius = rR - r.off;
+    rctx.beginPath();
+    rctx.arc(rcx,rcy,radius,0,Math.PI*2);
+    rctx.strokeStyle=r.color;rctx.lineWidth=r.w;rctx.stroke();
+  });
+
+  // Rotating dashed ring (blue)
+  rotAngle += 0.006;
+  rctx.save();rctx.translate(rcx,rcy);rctx.rotate(rotAngle);
+  rctx.beginPath();
+  rctx.arc(0,0,rR-30,0,Math.PI*2);
+  rctx.strokeStyle='rgba(26,106,255,0.35)';
+  rctx.lineWidth=1.5;
+  rctx.setLineDash([8,12]);rctx.stroke();rctx.setLineDash([]);
+  rctx.restore();
+
+  // CCW ring
+  rctx.save();rctx.translate(rcx,rcy);rctx.rotate(-rotAngle*0.7);
+  rctx.beginPath();
+  rctx.arc(0,0,rR-48,0,Math.PI*2);
+  rctx.strokeStyle='rgba(0,153,187,0.2)';
+  rctx.lineWidth=1;
+  rctx.setLineDash([4,8]);rctx.stroke();rctx.setLineDash([]);
+  rctx.restore();
+
+  // Tick marks (72 ticks, 4 sizes)
+  const rTick = rR - 62;
+  for(let i=0;i<72;i++){
+    const ang   = (i/72)*Math.PI*2 - Math.PI/2;
+    const major = i%9===0;
+    const mid   = i%3===0;
+    const len   = major?16:mid?8:4;
+    const r1 = rTick, r2 = rTick-len;
+    rctx.beginPath();
+    rctx.moveTo(rcx+r1*Math.cos(ang),rcy+r1*Math.sin(ang));
+    rctx.lineTo(rcx+r2*Math.cos(ang),rcy+r2*Math.sin(ang));
+    rctx.strokeStyle = major?'#0099bb':mid?'#004466':'#002030';
+    rctx.lineWidth   = major?2:1;
+    rctx.stroke();
+  }
+
+  // Pie segments (like reference image - grey/blue sectors)
+  const segR = rR - 78;
+  const segColors = [
+    'rgba(20,50,80,0.5)','rgba(15,40,65,0.4)',
+    'rgba(26,106,255,0.25)','rgba(15,40,65,0.4)',
+    'rgba(20,50,80,0.5)','rgba(10,30,50,0.3)',
+    'rgba(26,106,255,0.15)','rgba(15,40,65,0.4)',
+  ];
+  for(let i=0;i<8;i++){
+    const a1 = -Math.PI/2 + (i/8)*Math.PI*2 + 0.04;
+    const a2 = -Math.PI/2 + ((i+1)/8)*Math.PI*2 - 0.04;
+    rctx.beginPath();
+    rctx.moveTo(rcx,rcy);
+    rctx.arc(rcx,rcy,segR,a1,a2);
+    rctx.closePath();
+    rctx.fillStyle=segColors[i];rctx.fill();
+    // Segment border
+    rctx.beginPath();
+    rctx.arc(rcx,rcy,segR,a1,a2);
+    rctx.strokeStyle='rgba(0,153,187,0.3)';rctx.lineWidth=1;rctx.stroke();
+  }
+
+  // Inner filled ring (dark)
+  rctx.beginPath();
+  rctx.arc(rcx,rcy,rR-110,0,Math.PI*2);
+  rctx.fillStyle='rgba(7,10,14,0.85)';rctx.fill();
+  rctx.strokeStyle='#0099bb';rctx.lineWidth=1.5;rctx.stroke();
+
+  // Rotating sweep arm (radar)
+  radarAngle += 0.018;
+  const sweepR = rR - 110;
+
+  // Sweep gradient trail
+  const grad = rctx.createConicalGradient
+    ? null
+    : null;
+  // Manual sweep trail
+  for(let i=0;i<30;i++){
+    const a = radarAngle - (i/30)*1.2;
+    const alpha = (1-i/30)*0.3;
+    rctx.beginPath();
+    rctx.moveTo(rcx,rcy);
+    rctx.arc(rcx,rcy,sweepR,a-0.04,a+0.04);
+    rctx.closePath();
+    rctx.fillStyle=`rgba(0,212,255,${alpha})`;
+    rctx.fill();
+  }
+
+  // Sweep arm line
+  rctx.beginPath();
+  rctx.moveTo(rcx,rcy);
+  rctx.lineTo(
+    rcx+sweepR*Math.cos(radarAngle),
+    rcy+sweepR*Math.sin(radarAngle)
+  );
+  rctx.strokeStyle='rgba(0,212,255,0.8)';rctx.lineWidth=1.5;rctx.stroke();
+
+  // Radar blips
+  const blips=[{a:0.8,r:0.6},{a:2.3,r:0.75},{a:4.1,r:0.45},{a:5.2,r:0.85}];
+  blips.forEach(b=>{
+    const bx = rcx + sweepR*b.r*Math.cos(b.a);
+    const by = rcy + sweepR*b.r*Math.sin(b.a);
+    const diff = ((radarAngle-b.a)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    const alpha = Math.max(0,1-diff/2);
+    if(alpha>0.05){
+      rctx.beginPath();
+      rctx.arc(bx,by,3,0,Math.PI*2);
+      rctx.fillStyle=`rgba(0,255,136,${alpha})`;rctx.fill();
+    }
+  });
+
+  // Arc reactor core
+  const pulse = 1+0.06*Math.sin(t*3.5);
+  const coreRings=[
+    {r:38*pulse,c:'#001a28',w:2},
+    {r:26*pulse,c:'#003d55',w:2},
+    {r:16*pulse,c:'#0099bb',w:3},
+    {r:8*pulse, c:'#00d4ff',w:0},
+  ];
+  coreRings.forEach(cr=>{
+    rctx.beginPath();
+    rctx.arc(rcx,rcy,cr.r,0,Math.PI*2);
+    if(cr.w===0){rctx.fillStyle='#00d4ff';rctx.fill();}
+    else{rctx.strokeStyle=cr.c;rctx.lineWidth=cr.w;rctx.stroke();}
+  });
+  // Core glow
+  const grd=rctx.createRadialGradient(rcx,rcy,0,rcx,rcy,40);
+  grd.addColorStop(0,'rgba(0,212,255,0.15)');
+  grd.addColorStop(1,'rgba(0,212,255,0)');
+  rctx.beginPath();rctx.arc(rcx,rcy,40,0,Math.PI*2);
+  rctx.fillStyle=grd;rctx.fill();
+
+  // C: label (like reference)
+  rctx.fillStyle='rgba(0,212,255,0.5)';
+  rctx.font='10px "Share Tech Mono"';
+  rctx.fillText('C:',rcx-sweepR*0.1-15,rcy-sweepR*0.85);
+
+  // Degree labels on ring
+  for(let d=0;d<360;d+=45){
+    const ang = (d-90)*Math.PI/180;
+    const tx = rcx+(rR-20)*Math.cos(ang);
+    const ty = rcy+(rR-20)*Math.sin(ang);
+    rctx.fillStyle='rgba(0,100,120,0.6)';
+    rctx.font='8px "Share Tech Mono"';
+    rctx.textAlign='center';rctx.textBaseline='middle';
+    rctx.fillText(d+'°',tx,ty);
+  }
+
+  requestAnimationFrame(drawRadar);
+}
+drawRadar();
+
+// ══════════════════════════════════════
+// SIMULATED METRICS
+// ══════════════════════════════════════
+let cpu=35, ram=72, cpuT=35, ramT=72;
+const cpuHist=[], netHist=[];
+
+function lerp(a,b,t){return a+(b-a)*t;}
+
+setInterval(()=>{
+  cpuT = Math.max(5,Math.min(95,cpuT+(Math.random()-0.5)*15));
+  ramT = Math.max(50,Math.min(95,ramT+(Math.random()-0.5)*5));
+  cpu  = lerp(cpu,cpuT,0.1);
+  ram  = lerp(ram,ramT,0.08);
+
+  cpuHist.push(cpu);if(cpuHist.length>60)cpuHist.shift();
+  netHist.push(Math.random()*100);if(netHist.length>60)netHist.shift();
+
+  const cv = document.getElementById('cpu-val');
+  const rv = document.getElementById('ram-val');
+  cv.textContent = Math.round(cpu)+'%';
+  rv.textContent = Math.round(ram)+'%';
+  cv.className = 'stat-val'+(cpu>70?' warn':'');
+  rv.className = 'stat-val warn';
+
+  const up   = (Math.random()*50+5).toFixed(1);
+  const down = (Math.random()*150+20).toFixed(1);
+  document.getElementById('net-up').textContent   = up+' KB/s';
+  document.getElementById('net-down').textContent = down+' KB/s';
+  document.getElementById('disk-val').textContent = Math.floor(Math.random()*10+750)+' GB';
+
+  drawMiniGraph('graph-cpu',cpuHist,'#1a6aff');
+  drawMiniGraph('graph-net',netHist,'#00d4ff');
+},800);
+
+function drawMiniGraph(id,data,color){
+  const c=document.getElementById(id);
+  if(!c)return;
+  c.width=c.offsetWidth||200;c.height=30;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  if(data.length<2)return;
+  const max=Math.max(...data,1);
+  ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x=(i/(data.length-1))*c.width;
+    const y=c.height-(v/max)*(c.height-2)-1;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+  // Fill
+  ctx.lineTo(c.width,c.height);ctx.lineTo(0,c.height);ctx.closePath();
+  ctx.fillStyle=color.replace(')',',0.12)').replace('rgb','rgba').replace('#','rgba(').replace(',0.12)','');
+  // Simple fill
+  const g=ctx.createLinearGradient(0,0,0,c.height);
+  g.addColorStop(0,color+'44');g.addColorStop(1,color+'00');
+  ctx.fillStyle=g;ctx.fill();
+}
+
+// ══════════════════════════════════════
+// VU METER
+// ══════════════════════════════════════
+function buildVU(){
+  ['vu-top','vu-bot'].forEach(id=>{
+    const el=document.getElementById(id);
+    for(let i=0;i<8;i++){
+      const b=document.createElement('div');
+      b.className='vu-bar';
+      b.style.background=i<3?'#00ff88':i<6?'#1a6aff':'#ff2244';
+      el.appendChild(b);
+    }
+  });
+}
+buildVU();
+
+setInterval(()=>{
+  const level=Math.floor(Math.random()*9);
+  ['vu-top','vu-bot'].forEach(id=>{
+    const bars=document.getElementById(id).children;
+    for(let i=0;i<bars.length;i++){
+      bars[i].style.opacity = i<level?'1':'0.15';
+    }
+  });
+},150);
+
+// ══════════════════════════════════════
+// SPEECH BAR CYCLE
+// ══════════════════════════════════════
+const speeches=[
+  'JARVIS — AWAITING COMMAND, SIR',
+  'ALL SYSTEMS NOMINAL — 6 AGENTS ONLINE',
+  'SMART HOME BRIDGE ACTIVE',
+  'GEMINI NEURAL ENGINE ONLINE',
+  'NETWORK SCAN COMPLETE — NO THREATS',
+  'TOPPENSTEDT, DE — MONITORING ACTIVE',
+  'CLAUDE CODE BRIDGE — STANDBY',
+];
+let si=0;
+setInterval(()=>{
+  si=(si+1)%speeches.length;
+  document.getElementById('speech-bar').textContent=speeches[si];
+},4000);
+</script>
+</body>
+</html>
