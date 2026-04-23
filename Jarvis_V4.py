@@ -44,7 +44,7 @@ import google.generativeai as genai
 # ══════════════════════════════════════════════════════════════
 #  AYARLAR
 # ══════════════════════════════════════════════════════════════
-API_KEY         = "AIzaSyDJwDlO0pWBrHh00AFM_KfcioOBiMUDjOE"
+API_KEY         = ""
 VOICE           = "en-GB-RyanNeural"
 INTRO_FILE      = "intro.webm"
 WAKE_WORD       = "wake up"
