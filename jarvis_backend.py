@@ -130,6 +130,37 @@ def speak_async(text: str):
     t.start()
     return t
 
+_TTS_CACHE = os.path.abspath("jarvis_response.mp3")
+
+async def _tts_render_async(text: str):
+    """Download TTS audio to disk without playing it."""
+    await edge_tts.Communicate(text, VOICE).save(_TTS_CACHE)
+
+def prerender_tts(text: str) -> threading.Thread:
+    """Start rendering TTS in background; join() before play_prerendered()."""
+    def _run():
+        asyncio.run(_tts_render_async(text))
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return t
+
+def play_prerendered():
+    """Play the already-rendered TTS file immediately — no network wait."""
+    if PYGAME_OK:
+        try:
+            pygame.mixer.init()
+            snd = pygame.mixer.Sound(_TTS_CACHE)
+            snd.play()
+            time.sleep(snd.get_length() + 0.3)
+            return
+        except Exception:
+            pass
+    try:
+        os.startfile(_TTS_CACHE)
+        time.sleep(max(2.0, len(open(_TTS_CACHE, "rb").read()) / 16000))
+    except Exception:
+        pass
+
 # ══════════════════════════════════════════════════════════════
 #  MUSIC
 # ══════════════════════════════════════════════════════════════
@@ -196,11 +227,11 @@ def start_music():
         pass
 
 def fadeout_music():
-    if PYGAME_OK and pygame.mixer.get_init() and pygame.mixer.music.get_busy():
-        pygame.mixer.music.fadeout(int(MUSIC_FADE_SECS * 1000))
-        time.sleep(MUSIC_FADE_SECS + 0.15)
-    else:
-        time.sleep(MUSIC_FADE_SECS)
+    if PYGAME_OK and pygame.mixer.get_init():
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.fadeout(int(MUSIC_FADE_SECS * 1000))
+            time.sleep(MUSIC_FADE_SECS)
+        # if already stopped, no wait — caller is responsible for timing
 
 # ══════════════════════════════════════════════════════════════
 #  WEATHER
@@ -490,23 +521,32 @@ def _boot_sequence():
     _set_status("STANDBY")
     _set_speech("All systems online. Awaiting introduction...")
 
-    print(f"[JARVIS] Music playing for {MUSIC_FULL_SECS}s...")
-    time.sleep(MUSIC_FULL_SECS)
-
-    print("[JARVIS] Fading out music...")
-    fadeout_music()
-
     today  = datetime.datetime.now().strftime("%A, %B %d")
     report = (
         f"Welcome back, Sir. Today is {today}. "
         "All systems are nominal. "
-        f"Temperature in Toppenstedt is {_weather['temp']}. "
+        f"Temperature in {WEATHER_CITY} is {_weather['temp']}. "
         "Five-agent system and Gemini neural engine are online. "
         "Hoşgeldiniz efendim."
     )
+
+    # Pre-render TTS while music is still playing so there is zero gap after fadeout
+    print("[JARVIS] Pre-rendering welcome speech...")
+    render_thread = prerender_tts(report)
+
+    print(f"[JARVIS] Music playing for {MUSIC_FULL_SECS}s...")
+    time.sleep(MUSIC_FULL_SECS)
+
+    # Ensure audio is ready before we start the fade
+    render_thread.join()
+
+    print("[JARVIS] Fading out music...")
+    fadeout_music()  # smooth 3-second fade; blocks until complete
+
+    # Audio already on disk — play immediately, no network wait
     _set_status("SPEAKING")
     _set_speech(report)
-    speak_async(report).join()
+    play_prerendered()
 
     _active = True
     _set_status("LISTENING")
