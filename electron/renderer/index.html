@@ -194,6 +194,38 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
 .action-btn.danger{ border-color:#440011; color:#ff6688; background:rgba(255,34,68,0.06); }
 .action-btn.danger:hover{ background:rgba(255,34,68,0.16); border-color:var(--red); color:var(--red); }
 
+/* Agent badge */
+.agent-badge{
+  position:absolute; top:7%; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; gap:8px;
+  padding:5px 20px; z-index:10;
+  background:rgba(7,10,14,0.88); border:1px solid var(--border);
+  font-size:9px; letter-spacing:3px; color:var(--dim);
+  transition:border-color 0.3s, color 0.3s, box-shadow 0.3s;
+  white-space:nowrap;
+}
+.agent-badge.active{
+  border-color:var(--agent-color, var(--cyan));
+  color:var(--agent-color, var(--cyan));
+  box-shadow:0 0 14px color-mix(in srgb, var(--agent-color, var(--cyan)) 40%, transparent);
+}
+.agent-dot{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--dim); flex-shrink:0;
+  transition:background 0.3s, box-shadow 0.3s;
+}
+.agent-badge.active .agent-dot{
+  background:var(--agent-color, var(--cyan));
+  box-shadow:0 0 6px var(--agent-color, var(--cyan));
+}
+.agent-icon{ font-size:11px; opacity:0.7; }
+@keyframes agent-flash{
+  0%  { opacity:1; }
+  30% { opacity:0.4; }
+  100%{ opacity:1; }
+}
+.agent-badge.flash{ animation:agent-flash 0.5s ease-out; }
+
 /* Boot animation */
 @keyframes boot-in{ from{ opacity:0; filter:brightness(3) blur(4px); } to{ opacity:1; filter:none; } }
 .hud{ animation:boot-in 1.8s ease-out forwards; }
@@ -259,6 +291,11 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
 <!-- CENTER -->
 <div class="center">
   <canvas id="radar"></canvas>
+  <div class="agent-badge" id="agent-badge">
+    <div class="agent-dot"></div>
+    <span class="agent-icon" id="agent-icon">◈</span>
+    <span id="agent-name">NO AGENT</span>
+  </div>
   <div class="speech-bar" id="speech-bar">J.A.R.V.I.S — INITIALIZING...</div>
   <div class="cmd-input-wrap">
     <input class="cmd-input" id="cmd-input" type="text" placeholder="Type a command, Sir..." />
@@ -354,26 +391,60 @@ function send(data) {
         ws.send(JSON.stringify(data));
 }
 
+const AGENT_COLORS = {
+    'CODING':      '#1a6aff',
+    'SMART HOME':  '#00ff88',
+    'RESEARCH':    '#00d4ff',
+    'SOCIAL':      '#cc66ff',
+    'CALENDAR':    '#ff6a00',
+    'JARVIS':      '#00d4ff',
+};
+
+function setActiveAgent(name, icon) {
+    const badge   = document.getElementById('agent-badge');
+    const nameEl  = document.getElementById('agent-name');
+    const iconEl  = document.getElementById('agent-icon');
+    const lastEl  = document.getElementById('last-agent');
+    const color   = AGENT_COLORS[name] || '#00d4ff';
+
+    badge.style.setProperty('--agent-color', color);
+    nameEl.textContent = name;
+    iconEl.textContent = icon || '◈';
+    if (lastEl) lastEl.textContent = name;
+
+    badge.classList.remove('flash');
+    void badge.offsetWidth; // force reflow so animation restarts
+    badge.classList.add('active', 'flash');
+}
+
 function handleMessage(msg) {
     switch(msg.type) {
         case 'init':
             setSpeech(msg.speech);
             setStatus(msg.status);
             if (msg.weather) updateWeatherLabel(msg.weather);
-            if (msg.metrics) updateMetrics(msg.metrics);
+            if (msg.metrics) { updateMetrics(msg.metrics); patchMetrics(msg.metrics); }
             if (msg.alexa)   renderAlexa(msg.alexa);
             break;
-        case 'status':  setStatus(msg.text);   break;
-        case 'speech':  setSpeech(msg.text);   break;
-        case 'log':     addLog(msg.msg, msg.level); break;
-        case 'conv':    addLog(`${msg.role}: ${msg.text}`, msg.role.includes('SIR') ? 'cmd' : 'reply'); break;
+        case 'status':
+            setStatus(msg.text);
+            break;
+        case 'speech':
+            setSpeech(msg.text);
+            break;
+        case 'log':
+            addLog(msg.msg, msg.level);
+            break;
+        case 'conv':
+            addLog(`${msg.role}: ${msg.text}`, msg.role === 'SIR' ? 'cmd' : 'reply');
+            break;
         case 'metrics':
-            updateMetrics(msg.metrics);
-            if (msg.uptime) document.getElementById('uptime').textContent = msg.uptime;
-            if (msg.bridge) updateBridgeStatus(msg.bridge);
+            if (msg.metrics) { updateMetrics(msg.metrics); patchMetrics(msg.metrics); }
+            if (msg.uptime)  document.getElementById('uptime').textContent = msg.uptime;
+            if (msg.bridge)  updateBridgeStatus(msg.bridge);
             break;
         case 'agent':
-            document.getElementById('last-agent').textContent = msg.agent;
+            setActiveAgent(msg.agent, msg.icon);
             break;
         case 'user_text':
             document.getElementById('cmd-input').value = '';
@@ -755,17 +826,7 @@ document.getElementById('cmd-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('cmd-send').click();
 });
 
-// Cache latest metrics for radar labels
-window.addEventListener('message', () => {});
 function patchMetrics(m) { window._latestMetrics = m; }
-
-// Hook into handleMessage to patch metrics
-const _origHandle = handleMessage;
-function handleMessage(msg) {
-    _origHandle(msg);
-    if (msg.type === 'metrics' && msg.metrics) patchMetrics(msg.metrics);
-    if (msg.type === 'init' && msg.metrics)    patchMetrics(msg.metrics);
-}
 
 // Connect
 connect();

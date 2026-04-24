@@ -42,7 +42,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-import jarvis_agents
+import agents
 
 # ══════════════════════════════════════════════════════════════
 #  CONFIG
@@ -388,8 +388,8 @@ class ClaudeCodeBridge:
 _bridge = ClaudeCodeBridge()
 
 # ── Boot agents ───────────────────────────────────────────────
-jarvis_agents.init(ask_gemini, _bridge, _reminders, _alexa_devices)
-_router = jarvis_agents.AgentRouter()
+agents.init(ask_gemini, _bridge, _reminders, _alexa_devices)
+_router = agents.AgentRouter()
 
 # ══════════════════════════════════════════════════════════════
 #  MICROPHONE
@@ -572,13 +572,13 @@ def _handle_command(text: str):
     _set_speech(f"Processing: {text[:80]}...")
     mgr.broadcast_sync({"type": "user_text", "text": text})
 
-    agent_name, reply = _router.route(text)
+    agent_name, reply, agent_icon = _router.route(text)
 
     _set_status("SPEAKING")
     _add_log(f"{agent_name}: {reply[:45]}", "reply")
     _add_conv(agent_name, reply)
     _set_speech(reply)
-    mgr.broadcast_sync({"type": "agent", "agent": agent_name})
+    mgr.broadcast_sync({"type": "agent", "agent": agent_name, "icon": agent_icon})
 
     speak_async(reply).join()
 
