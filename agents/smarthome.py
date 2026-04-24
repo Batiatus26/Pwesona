@@ -1,5 +1,5 @@
 from agents.base import BaseAgent
-from agents import _ctx
+from agents.context import _ctx
 
 
 class AgentSmartHome(BaseAgent):

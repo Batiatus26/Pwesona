@@ -1,7 +1,7 @@
 import datetime
 import re
 from agents.base import BaseAgent
-from agents import _ctx
+from agents.context import _ctx
 
 
 class AgentCalendar(BaseAgent):
