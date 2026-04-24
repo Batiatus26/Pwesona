@@ -631,8 +631,97 @@ async def _handle_ws_message(msg: dict):
         text = msg.get("text", "").strip()
         if text:
             threading.Thread(target=_handle_command, args=(text,), daemon=True).start()
+    elif t == "action":
+        await _handle_action(msg)
     elif t == "ping":
         await mgr.broadcast({"type": "pong"})
+
+
+# ── App name → Windows launch command ────────────────────────
+_APP_LAUNCH: dict = {
+    "chrome":          ["start", "", "chrome"],
+    "spotify":         ["start", "", "spotify"],
+    "discord":         ["start", "", "discord"],
+    "whatsapp":        ["start", "", "WhatsApp"],
+    "telegram":        ["start", "", "telegram"],
+    "claude":          ["start", "", "claude"],
+    "android_studio":  ["start", "", "studio64"],
+    "visual_studio":   ["start", "", "devenv"],
+    "pycharm":         ["start", "", "pycharm"],
+}
+
+# Friendly display names
+_APP_NAMES: dict = {
+    "chrome":         "Chrome",
+    "spotify":        "Spotify",
+    "discord":        "Discord",
+    "whatsapp":       "WhatsApp",
+    "telegram":       "Telegram",
+    "claude":         "Claude Code",
+    "android_studio": "Android Studio",
+    "visual_studio":  "Visual Studio",
+    "pycharm":        "PyCharm",
+}
+
+def _launch_app(app: str) -> tuple:
+    if app not in _APP_LAUNCH:
+        return False, f"Unknown application: {app}"
+    name = _APP_NAMES.get(app, app.replace("_", " ").title())
+    try:
+        subprocess.Popen(
+            _APP_LAUNCH[app],
+            shell=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        )
+        return True, f"Launching {name}, Sir."
+    except Exception as e:
+        return False, f"Could not launch {name}: {str(e)[:80]}"
+
+
+_SYSTEM_CMDS: dict = {
+    "restart":  "shutdown /r /t 10",
+    "shutdown": "shutdown /s /t 10",
+    "logoff":   "shutdown /l",
+    "sleep":    "rundll32.exe powrprof.dll,SetSuspendState 0,1,0",
+}
+
+def _run_system_cmd(cmd: str):
+    if cmd not in _SYSTEM_CMDS:
+        return
+    verb = cmd.title()
+    msg  = f"Initiating {verb}, Sir. You have 10 seconds." if cmd in ("restart", "shutdown") \
+           else f"{verb} sequence initiated, Sir."
+    _add_log(f"SYSTEM: {cmd.upper()}", "warn")
+    _set_speech(msg)
+    speak_async(msg)
+    subprocess.Popen(_SYSTEM_CMDS[cmd], shell=True)
+
+
+async def _handle_action(msg: dict):
+    action = msg.get("action", "")
+
+    if action == "launch_app":
+        app      = msg.get("app", "")
+        ok, text = _launch_app(app)
+        _add_log(text, "ok" if ok else "warn")
+        await mgr.broadcast({
+            "type":   "action_result",
+            "ok":     ok,
+            "msg":    text,
+            "speech": text if ok else None,
+        })
+        if ok:
+            speak_async(text)
+
+    elif action == "system":
+        cmd = msg.get("cmd", "")
+        if cmd in _SYSTEM_CMDS:
+            threading.Thread(target=_run_system_cmd, args=(cmd,), daemon=True).start()
+            await mgr.broadcast({
+                "type": "action_result",
+                "ok":   True,
+                "msg":  f"SYSTEM: {cmd.upper()} initiated",
+            })
 
 
 # Background task: push metrics + weather every 2 seconds

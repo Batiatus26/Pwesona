@@ -66,9 +66,13 @@ canvas#logo{ flex-shrink:0; }
   background:rgba(0,212,255,0.04);
   border:1px solid var(--border); border-radius:2px;
   font-size:9px; color:var(--dim); letter-spacing:1px;
-  cursor:pointer; transition:all 0.2s;
+  cursor:pointer; transition:all 0.15s; user-select:none;
 }
 .app-btn:hover{ background:rgba(0,212,255,0.1); border-color:var(--cyan2); color:var(--white); }
+.app-btn:active, .app-btn.clicking{
+  background:rgba(0,212,255,0.2); border-color:var(--cyan);
+  color:var(--cyan); transform:scale(0.95);
+}
 .date-block{ text-align:right; padding-left:14px; border-left:1px solid var(--border); }
 .date-day{ font-size:28px; font-weight:900; color:var(--white); line-height:1; }
 .date-month{ font-size:9px; letter-spacing:3px; color:var(--cyan); background:var(--blue2); padding:1px 6px; display:inline-block; margin-top:2px; }
@@ -93,9 +97,13 @@ canvas#logo{ flex-shrink:0; }
   padding:7px 8px; margin-bottom:4px;
   background:linear-gradient(to right,rgba(0,212,255,0.05),transparent);
   border:1px solid var(--border); border-left:2px solid var(--cyan3);
-  cursor:pointer; transition:all 0.2s; position:relative;
+  cursor:pointer; transition:all 0.15s; position:relative; user-select:none;
 }
 .app-item:hover{ background:linear-gradient(to right,rgba(0,212,255,0.12),transparent); border-color:var(--cyan2); }
+.app-item:active, .app-item.clicking{
+  background:linear-gradient(to right,rgba(0,212,255,0.22),transparent);
+  border-color:var(--cyan); border-left-color:var(--cyan); transform:scale(0.97);
+}
 .app-plus{ font-size:9px; color:var(--cyan3); width:12px; }
 .app-icon{ font-size:13px; width:20px; text-align:center; }
 .app-name{ font-size:10px; color:var(--white); letter-spacing:1px; }
@@ -188,11 +196,17 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
 .action-btn{
   padding:4px 20px; font-family:'Courier New',monospace; font-size:9px;
   letter-spacing:3px; cursor:pointer; border:1px solid var(--border);
-  background:rgba(0,212,255,0.04); color:var(--dim); transition:all 0.2s;
+  background:rgba(0,212,255,0.04); color:var(--dim); transition:all 0.15s; user-select:none;
 }
 .action-btn:hover{ background:rgba(0,212,255,0.1); color:var(--white); border-color:var(--cyan2); }
+.action-btn:active, .action-btn.clicking{
+  background:rgba(0,212,255,0.2); color:var(--cyan); border-color:var(--cyan); transform:scale(0.96);
+}
 .action-btn.danger{ border-color:#440011; color:#ff6688; background:rgba(255,34,68,0.06); }
 .action-btn.danger:hover{ background:rgba(255,34,68,0.16); border-color:var(--red); color:var(--red); }
+.action-btn.danger:active, .action-btn.danger.clicking{
+  background:rgba(255,34,68,0.28); border-color:var(--red); color:var(--red); transform:scale(0.96);
+}
 
 /* Agent badge */
 .agent-badge{
@@ -253,12 +267,12 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
   </div>
   <div class="vdiv"></div>
   <div class="apps">
-    <div class="app-btn">🎵 SPOTIFY</div>
-    <div class="app-btn">💬 DISCORD</div>
-    <div class="app-btn">📱 WHATSAPP</div>
-    <div class="app-btn">✈ TELEGRAM</div>
-    <div class="app-btn">🌐 CHROME</div>
-    <div class="app-btn">⚡ CLAUDE</div>
+    <div class="app-btn" data-app="spotify">🎵 SPOTIFY</div>
+    <div class="app-btn" data-app="discord">💬 DISCORD</div>
+    <div class="app-btn" data-app="whatsapp">📱 WHATSAPP</div>
+    <div class="app-btn" data-app="telegram">✈ TELEGRAM</div>
+    <div class="app-btn" data-app="chrome">🌐 CHROME</div>
+    <div class="app-btn" data-app="claude">⚡ CLAUDE</div>
   </div>
   <div class="vdiv" style="margin-left:auto"></div>
   <div class="date-block">
@@ -274,13 +288,13 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
 <div class="left">
   <div class="side-label">DEVICE CONTROL</div>
   <div class="app-list">
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🌐</span><span class="app-name">Chrome</span></div>
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🤖</span><span class="app-name">Android Studio</span></div>
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">💻</span><span class="app-name">Visual Studio</span></div>
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🐍</span><span class="app-name">PyCharm</span></div>
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">⚡</span><span class="app-name">Claude Code</span></div>
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🏠</span><span class="app-name">Smart Home</span></div>
-    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🧠</span><span class="app-name">JARVIS A.I.</span></div>
+    <div class="app-item" data-app="chrome"><span class="app-plus">+</span><span class="app-icon">🌐</span><span class="app-name">Chrome</span></div>
+    <div class="app-item" data-app="android_studio"><span class="app-plus">+</span><span class="app-icon">🤖</span><span class="app-name">Android Studio</span></div>
+    <div class="app-item" data-app="visual_studio"><span class="app-plus">+</span><span class="app-icon">💻</span><span class="app-name">Visual Studio</span></div>
+    <div class="app-item" data-app="pycharm"><span class="app-plus">+</span><span class="app-icon">🐍</span><span class="app-name">PyCharm</span></div>
+    <div class="app-item" data-app="claude"><span class="app-plus">+</span><span class="app-icon">⚡</span><span class="app-name">Claude Code</span></div>
+    <div class="app-item" data-app="smarthome"><span class="app-plus">+</span><span class="app-icon">🏠</span><span class="app-name">Smart Home</span></div>
+    <div class="app-item" data-app="jarvis_ai"><span class="app-plus">+</span><span class="app-icon">🧠</span><span class="app-name">JARVIS A.I.</span></div>
   </div>
   <div class="log-section">
     <div class="log-title">ACTIVITY LOG</div>
@@ -350,10 +364,10 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
     </div>
   </div>
   <div class="action-row">
-    <button class="action-btn">RESTART</button>
-    <button class="action-btn danger">SHUTDOWN</button>
-    <button class="action-btn">LOG OFF</button>
-    <button class="action-btn">SLEEP MODE</button>
+    <button class="action-btn" data-syscmd="restart">RESTART</button>
+    <button class="action-btn danger" data-syscmd="shutdown">SHUTDOWN</button>
+    <button class="action-btn" data-syscmd="logoff">LOG OFF</button>
+    <button class="action-btn" data-syscmd="sleep">SLEEP MODE</button>
   </div>
 </div>
 
@@ -448,6 +462,10 @@ function handleMessage(msg) {
             break;
         case 'user_text':
             document.getElementById('cmd-input').value = '';
+            break;
+        case 'action_result':
+            addLog(msg.ok ? `✓ ${msg.msg}` : `✗ ${msg.msg}`, msg.ok ? 'ok' : 'warn');
+            if (msg.speech) setSpeech(msg.speech);
             break;
     }
 }
@@ -827,6 +845,46 @@ document.getElementById('cmd-input').addEventListener('keydown', (e) => {
 });
 
 function patchMetrics(m) { window._latestMetrics = m; }
+
+// ══════════════════════════════════
+// BUTTON CLICK HANDLERS
+// ══════════════════════════════════
+function flash(el) {
+    el.classList.add('clicking');
+    setTimeout(() => el.classList.remove('clicking'), 280);
+}
+
+// App buttons — top bar and left panel
+document.querySelectorAll('[data-app]').forEach(el => {
+    el.addEventListener('click', () => {
+        flash(el);
+        const app = el.dataset.app;
+        if (app === 'smarthome') {
+            send({ type: 'command', text: 'show smart home status' });
+            addLog('▸ Smart Home panel', 'cmd');
+        } else if (app === 'jarvis_ai') {
+            send({ type: 'command', text: 'jarvis give me a full status report' });
+            addLog('▸ JARVIS status report', 'cmd');
+        } else {
+            send({ type: 'action', action: 'launch_app', app });
+            addLog(`▸ Launch: ${app.replace(/_/g,' ').toUpperCase()}`, 'cmd');
+        }
+    });
+});
+
+// System action buttons — bottom bar
+const CONFIRM_CMDS = new Set(['shutdown', 'restart']);
+document.querySelectorAll('[data-syscmd]').forEach(el => {
+    el.addEventListener('click', () => {
+        const cmd = el.dataset.syscmd;
+        if (CONFIRM_CMDS.has(cmd)) {
+            if (!confirm(`Execute ${cmd.toUpperCase()}?\n\nSystem will ${cmd} in 10 seconds.`)) return;
+        }
+        flash(el);
+        send({ type: 'action', action: 'system', cmd });
+        addLog(`▸ SYSTEM: ${cmd.toUpperCase()}`, 'warn');
+    });
+});
 
 // Connect
 connect();
