@@ -13,6 +13,9 @@ import speech_recognition as sr
 import sounddevice as sd
 import numpy as np
 from scipy.io import wavfile
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import edge_tts
 import google.generativeai as genai
@@ -44,22 +47,22 @@ import jarvis_agents
 # ══════════════════════════════════════════════════════════════
 #  CONFIG
 # ══════════════════════════════════════════════════════════════
-API_KEY         = "AIzaSyDJwDlO0pWBrHh00AFM_KfcioOBiMUDjOE"
+API_KEY         = os.environ["GEMINI_API_KEY"]
 VOICE           = "en-GB-RyanNeural"
 INTRO_FILE      = "intro.webm"
 WAKE_WORD       = "wake up"
 LANGUAGE        = "en-US"
 MUSIC_FULL_SECS = 20
 MUSIC_FADE_SECS = 3
-WEATHER_CITY    = "Toppenstedt"
-WS_PORT         = 8765
+WEATHER_CITY    = os.getenv("WEATHER_CITY", "Toppenstedt")
+WS_PORT         = int(os.getenv("WS_PORT", "8765"))
 
-SSH_HOST     = ""
-SSH_PORT     = 22
-SSH_USER     = ""
-SSH_KEY_PATH = ""
-SSH_PASSWORD = ""
-SSH_CLAUDE   = "claude"
+SSH_HOST     = os.getenv("SSH_HOST", "")
+SSH_PORT     = int(os.getenv("SSH_PORT", "22"))
+SSH_USER     = os.getenv("SSH_USER", "")
+SSH_KEY_PATH = os.getenv("SSH_KEY_PATH", "")
+SSH_PASSWORD = os.getenv("SSH_PASSWORD", "")
+SSH_CLAUDE   = os.getenv("SSH_CLAUDE", "claude")
 
 SYSTEM_PROMPT = """You are J.A.R.V.I.S. (Just A Rather Very Intelligent System),
 the AI assistant of Tony Stark / Iron Man.

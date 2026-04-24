@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+jarvis_response.mp3
+_tmp_rec.wav
+intro_converted.wav
+intro_converted.mp3
+
+# Node / Electron
+electron/node_modules/
