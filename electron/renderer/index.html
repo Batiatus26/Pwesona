@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>J.A.R.V.I.S OS — MARK IV</title>
+<style>
+:root {
+  --bg:     #070a0e;
+  --panel:  #0a0f14;
+  --cyan:   #00d4ff;
+  --cyan2:  #0099bb;
+  --cyan3:  #003d55;
+  --cyan4:  #001a25;
+  --blue:   #1a6aff;
+  --blue2:  #0044cc;
+  --orange: #ff6a00;
+  --red:    #ff2244;
+  --green:  #00ff88;
+  --white:  #cce8ff;
+  --dim:    #2a4a5a;
+  --border: #0d2535;
+  --grid:   #0a1820;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+body{
+  background:var(--bg); color:var(--white);
+  font-family:'Courier New',monospace;
+  width:100vw; height:100vh; overflow:hidden;
+  cursor:crosshair; user-select:none;
+}
+body::before{
+  content:''; position:fixed; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px);
+  pointer-events:none; z-index:9999;
+}
+
+/* ── LAYOUT ── */
+.hud{
+  display:grid;
+  grid-template-columns:220px 1fr 68px;
+  grid-template-rows:72px 1fr 134px;
+  width:100vw; height:100vh;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  grid-column:1/-1;
+  display:flex; align-items:center;
+  background:linear-gradient(to bottom,#0d1820,#070a0e);
+  border-bottom:1px solid var(--border);
+  padding:0 14px; gap:10px;
+}
+.logo-wrap{ display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); }
+canvas#logo{ flex-shrink:0; }
+.logo-text{ font-size:14px; font-weight:700; color:var(--cyan); letter-spacing:2px; }
+.logo-sub{ font-size:8px; color:var(--cyan3); letter-spacing:3px; margin-top:2px; }
+.vdiv{ width:1px; height:48px; background:var(--border); flex-shrink:0; margin:0 6px; }
+.user-card{ display:flex; align-items:center; gap:8px; padding:0 10px; }
+.user-avatar{ font-size:20px; }
+.user-name{ font-size:11px; color:var(--white); font-weight:700; letter-spacing:2px; }
+.user-ver{ font-size:8px; color:var(--cyan3); letter-spacing:1px; margin-top:2px; }
+.apps{ display:flex; align-items:center; gap:5px; flex:1; padding:0 10px; }
+.app-btn{
+  display:flex; align-items:center; gap:5px;
+  padding:4px 10px;
+  background:rgba(0,212,255,0.04);
+  border:1px solid var(--border); border-radius:2px;
+  font-size:9px; color:var(--dim); letter-spacing:1px;
+  cursor:pointer; transition:all 0.2s;
+}
+.app-btn:hover{ background:rgba(0,212,255,0.1); border-color:var(--cyan2); color:var(--white); }
+.date-block{ text-align:right; padding-left:14px; border-left:1px solid var(--border); }
+.date-day{ font-size:28px; font-weight:900; color:var(--white); line-height:1; }
+.date-month{ font-size:9px; letter-spacing:3px; color:var(--cyan); background:var(--blue2); padding:1px 6px; display:inline-block; margin-top:2px; }
+.date-dow{ font-size:8px; color:var(--dim); letter-spacing:2px; margin-top:2px; }
+.top-status{ font-size:9px; font-weight:700; color:var(--green); padding-right:8px; white-space:nowrap; }
+
+/* ── LEFT PANEL ── */
+.left{
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+  position:relative;
+}
+.side-label{
+  position:absolute; left:-18px; top:50%;
+  transform:translateY(-50%) rotate(-90deg);
+  font-size:7px; letter-spacing:4px; color:var(--cyan3); white-space:nowrap;
+}
+.app-list{ padding:10px 10px 10px 26px; }
+.app-item{
+  display:flex; align-items:center; gap:8px;
+  padding:7px 8px; margin-bottom:4px;
+  background:linear-gradient(to right,rgba(0,212,255,0.05),transparent);
+  border:1px solid var(--border); border-left:2px solid var(--cyan3);
+  cursor:pointer; transition:all 0.2s; position:relative;
+}
+.app-item:hover{ background:linear-gradient(to right,rgba(0,212,255,0.12),transparent); border-color:var(--cyan2); }
+.app-plus{ font-size:9px; color:var(--cyan3); width:12px; }
+.app-icon{ font-size:13px; width:20px; text-align:center; }
+.app-name{ font-size:10px; color:var(--white); letter-spacing:1px; }
+.log-section{ border-top:1px solid var(--border); padding:6px 10px 6px 26px; flex:1; overflow:hidden; }
+.log-title{ font-size:7px; color:var(--cyan2); letter-spacing:2px; font-weight:700; margin-bottom:4px; }
+.log-item{ font-size:7px; margin:2px 0; line-height:1.4; word-break:break-all; }
+.log-info{ color:var(--cyan3); }
+.log-ok{ color:var(--green); }
+.log-warn{ color:var(--orange); }
+.log-alert{ color:var(--red); }
+.log-cmd{ color:var(--orange); }
+.log-reply{ color:var(--cyan); }
+
+/* ── CENTER ── */
+.center{
+  position:relative; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
+.speech-bar{
+  position:absolute; bottom:5%; left:50%; transform:translateX(-50%);
+  background:rgba(10,15,20,0.92); border:1px solid var(--cyan3);
+  padding:6px 22px; font-size:10px; color:var(--cyan); letter-spacing:2px;
+  white-space:nowrap; max-width:70%; overflow:hidden; text-overflow:ellipsis;
+  z-index:10;
+}
+.cmd-input-wrap{
+  position:absolute; bottom:2%; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px; z-index:10;
+}
+.cmd-input{
+  width:360px; padding:5px 12px;
+  background:rgba(10,15,20,0.9); border:1px solid var(--cyan3);
+  color:var(--cyan); font-family:'Courier New',monospace; font-size:10px;
+  letter-spacing:1px; outline:none;
+}
+.cmd-input::placeholder{ color:var(--dim); }
+.cmd-btn{
+  padding:5px 16px;
+  background:rgba(0,212,255,0.08); border:1px solid var(--cyan3);
+  color:var(--cyan2); font-family:'Courier New',monospace; font-size:9px;
+  letter-spacing:2px; cursor:pointer;
+}
+.cmd-btn:hover{ background:rgba(0,212,255,0.18); color:var(--cyan); }
+
+/* ── RIGHT STRIP ── */
+.right-strip{
+  background:var(--panel);
+  border-left:1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center;
+  padding:8px 4px; gap:4px;
+}
+.vu-meter{ width:44px; display:flex; flex-direction:column; gap:2px; padding:4px 0; }
+.vu-bar{ width:44px; height:7px; border-radius:1px; transition:opacity 0.1s; }
+.jarvis-vert{
+  flex:1; display:flex; align-items:center; justify-content:center;
+  writing-mode:vertical-rl; text-orientation:upright;
+  font-size:16px; font-weight:700; color:var(--blue);
+  text-shadow:0 0 14px rgba(26,106,255,0.5);
+  letter-spacing:8px;
+}
+
+/* ── BOTTOM BAR ── */
+.bottom{
+  grid-column:1/-1;
+  background:linear-gradient(to top,#0d1820,#070a0e);
+  border-top:1px solid var(--border);
+  display:flex; flex-direction:column;
+  padding:6px 12px 4px;
+}
+.stat-cols{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0; flex:1; }
+.stat-col{ padding:0 10px; border-right:1px solid var(--border); }
+.stat-col:last-child{ border-right:none; }
+.stat-label{ font-size:8px; color:var(--dim); letter-spacing:2px; margin-bottom:5px; }
+.stat-row{ display:flex; justify-content:space-between; align-items:center; margin:3px 0; }
+.stat-key{ font-size:8px; color:var(--cyan3); }
+.stat-val{ font-size:8px; font-weight:700; color:var(--white); }
+.stat-val.ok{ color:var(--green); }
+.stat-val.warn{ color:var(--orange); }
+.stat-val.danger{ color:var(--red); }
+.mini-graph{ height:26px; margin-top:4px; position:relative; }
+.mini-graph canvas{ width:100%; height:100%; display:block; }
+.brand-block{ text-align:right; padding-top:4px; }
+.brand-name{ font-size:12px; font-weight:700; color:var(--dim); letter-spacing:3px; }
+.brand-ver{ font-size:7px; color:var(--cyan3); letter-spacing:2px; }
+.action-row{
+  display:flex; align-items:center; gap:10px;
+  border-top:1px solid var(--border); padding-top:4px; margin-top:4px;
+}
+.action-btn{
+  padding:4px 20px; font-family:'Courier New',monospace; font-size:9px;
+  letter-spacing:3px; cursor:pointer; border:1px solid var(--border);
+  background:rgba(0,212,255,0.04); color:var(--dim); transition:all 0.2s;
+}
+.action-btn:hover{ background:rgba(0,212,255,0.1); color:var(--white); border-color:var(--cyan2); }
+.action-btn.danger{ border-color:#440011; color:#ff6688; background:rgba(255,34,68,0.06); }
+.action-btn.danger:hover{ background:rgba(255,34,68,0.16); border-color:var(--red); color:var(--red); }
+
+/* Boot animation */
+@keyframes boot-in{ from{ opacity:0; filter:brightness(3) blur(4px); } to{ opacity:1; filter:none; } }
+.hud{ animation:boot-in 1.8s ease-out forwards; }
+</style>
+</head>
+<body>
+<div class="hud">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo-wrap">
+    <canvas id="logo" width="48" height="48"></canvas>
+    <div>
+      <div class="logo-text">JARVIS OS</div>
+      <div class="logo-sub">Ver MARK IV</div>
+    </div>
+  </div>
+  <div class="vdiv"></div>
+  <div class="user-card">
+    <div class="user-avatar">👤</div>
+    <div>
+      <div class="user-name">STARK</div>
+      <div class="user-ver">AUTHORIZED USER</div>
+    </div>
+  </div>
+  <div class="vdiv"></div>
+  <div class="apps">
+    <div class="app-btn">🎵 SPOTIFY</div>
+    <div class="app-btn">💬 DISCORD</div>
+    <div class="app-btn">📱 WHATSAPP</div>
+    <div class="app-btn">✈ TELEGRAM</div>
+    <div class="app-btn">🌐 CHROME</div>
+    <div class="app-btn">⚡ CLAUDE</div>
+  </div>
+  <div class="vdiv" style="margin-left:auto"></div>
+  <div class="date-block">
+    <div class="date-day" id="day-num">--</div>
+    <div class="date-month" id="month-name">---</div>
+    <div class="date-dow" id="dow-name">-------</div>
+  </div>
+  <div class="vdiv"></div>
+  <div class="top-status" id="top-status">● OFFLINE</div>
+</div>
+
+<!-- LEFT PANEL -->
+<div class="left">
+  <div class="side-label">DEVICE CONTROL</div>
+  <div class="app-list">
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🌐</span><span class="app-name">Chrome</span></div>
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🤖</span><span class="app-name">Android Studio</span></div>
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">💻</span><span class="app-name">Visual Studio</span></div>
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🐍</span><span class="app-name">PyCharm</span></div>
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">⚡</span><span class="app-name">Claude Code</span></div>
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🏠</span><span class="app-name">Smart Home</span></div>
+    <div class="app-item"><span class="app-plus">+</span><span class="app-icon">🧠</span><span class="app-name">JARVIS A.I.</span></div>
+  </div>
+  <div class="log-section">
+    <div class="log-title">ACTIVITY LOG</div>
+    <div id="log-container"></div>
+  </div>
+</div>
+
+<!-- CENTER -->
+<div class="center">
+  <canvas id="radar"></canvas>
+  <div class="speech-bar" id="speech-bar">J.A.R.V.I.S — INITIALIZING...</div>
+  <div class="cmd-input-wrap">
+    <input class="cmd-input" id="cmd-input" type="text" placeholder="Type a command, Sir..." />
+    <button class="cmd-btn" id="cmd-send">SEND</button>
+  </div>
+</div>
+
+<!-- RIGHT STRIP -->
+<div class="right-strip">
+  <div class="vu-meter" id="vu-top"></div>
+  <div class="jarvis-vert">JARVIS</div>
+  <div class="vu-meter" id="vu-bot"></div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom">
+  <div class="stat-cols">
+    <!-- NETWORK -->
+    <div class="stat-col">
+      <div class="stat-label">NETWORK</div>
+      <div class="stat-row"><span class="stat-key">UP</span><span class="stat-val ok" id="net-up">-- KB/s</span></div>
+      <div class="stat-row"><span class="stat-key">DOWN</span><span class="stat-val ok" id="net-dn">-- KB/s</span></div>
+      <div class="stat-row"><span class="stat-key">SSID</span><span class="stat-val" id="ssid">STARK-NET</span></div>
+      <div class="mini-graph"><canvas id="graph-net"></canvas></div>
+    </div>
+    <!-- SYSTEM -->
+    <div class="stat-col">
+      <div class="stat-label">SYSTEM</div>
+      <div class="stat-row"><span class="stat-key">CPU</span><span class="stat-val" id="cpu-val">--%</span></div>
+      <div class="stat-row"><span class="stat-key">RAM</span><span class="stat-val warn" id="ram-val">--%</span></div>
+      <div class="stat-row"><span class="stat-key">DISK</span><span class="stat-val" id="disk-val">--%</span></div>
+      <div class="stat-row"><span class="stat-key">UPTIME</span><span class="stat-val" id="uptime">0d 0h 0m</span></div>
+      <div class="mini-graph"><canvas id="graph-cpu"></canvas></div>
+    </div>
+    <!-- SMART HOME -->
+    <div class="stat-col">
+      <div class="stat-label">SMART HOME — ALEXA</div>
+      <div id="alexa-rows"></div>
+    </div>
+    <!-- STATUS -->
+    <div class="stat-col" style="position:relative">
+      <div class="stat-label">STATUS</div>
+      <div class="stat-row"><span class="stat-key">AGENTS</span><span class="stat-val ok">5 / 5</span></div>
+      <div class="stat-row"><span class="stat-key">AI ENGINE</span><span class="stat-val ok">GEMINI 2.5</span></div>
+      <div class="stat-row"><span class="stat-key">BRIDGE</span><span class="stat-val" id="bridge-status">OFFLINE</span></div>
+      <div class="stat-row"><span class="stat-key">THREAT</span><span class="stat-val ok">LOW</span></div>
+      <div class="stat-row"><span class="stat-key">AGENT</span><span class="stat-val" id="last-agent">—</span></div>
+      <div class="brand-block">
+        <div class="brand-name">J.A.R.V.I.S</div>
+        <div class="brand-ver">OS VERSION MK IV</div>
+      </div>
+    </div>
+  </div>
+  <div class="action-row">
+    <button class="action-btn">RESTART</button>
+    <button class="action-btn danger">SHUTDOWN</button>
+    <button class="action-btn">LOG OFF</button>
+    <button class="action-btn">SLEEP MODE</button>
+  </div>
+</div>
+
+</div><!-- .hud -->
+
+<script>
+// ══════════════════════════════════
+// WEBSOCKET
+// ══════════════════════════════════
+const WS_URL = 'ws://localhost:8765/ws';
+let ws = null;
+let reconnectTimer = null;
+
+function connect() {
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => {
+        console.log('[WS] Connected');
+        clearTimeout(reconnectTimer);
+        setStatus('CONNECTED', 'ok');
+    };
+    ws.onmessage = (e) => {
+        try { handleMessage(JSON.parse(e.data)); }
+        catch(err) { console.error('[WS] Parse error:', err); }
+    };
+    ws.onclose = () => {
+        console.log('[WS] Disconnected. Reconnecting in 3s...');
+        setStatus('OFFLINE', 'danger');
+        reconnectTimer = setTimeout(connect, 3000);
+    };
+    ws.onerror = () => ws.close();
+}
+
+function send(data) {
+    if (ws && ws.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify(data));
+}
+
+function handleMessage(msg) {
+    switch(msg.type) {
+        case 'init':
+            setSpeech(msg.speech);
+            setStatus(msg.status);
+            if (msg.weather) updateWeatherLabel(msg.weather);
+            if (msg.metrics) updateMetrics(msg.metrics);
+            if (msg.alexa)   renderAlexa(msg.alexa);
+            break;
+        case 'status':  setStatus(msg.text);   break;
+        case 'speech':  setSpeech(msg.text);   break;
+        case 'log':     addLog(msg.msg, msg.level); break;
+        case 'conv':    addLog(`${msg.role}: ${msg.text}`, msg.role.includes('SIR') ? 'cmd' : 'reply'); break;
+        case 'metrics':
+            updateMetrics(msg.metrics);
+            if (msg.uptime) document.getElementById('uptime').textContent = msg.uptime;
+            if (msg.bridge) updateBridgeStatus(msg.bridge);
+            break;
+        case 'agent':
+            document.getElementById('last-agent').textContent = msg.agent;
+            break;
+        case 'user_text':
+            document.getElementById('cmd-input').value = '';
+            break;
+    }
+}
+
+// ══════════════════════════════════
+// HUD UPDATES
+// ══════════════════════════════════
+function setStatus(text, cls) {
+    const el = document.getElementById('top-status');
+    el.textContent = '● ' + text;
+    el.style.color = cls === 'danger' ? 'var(--red)' :
+                     cls === 'ok'     ? 'var(--green)' : 'var(--green)';
+}
+
+function setSpeech(text) {
+    document.getElementById('speech-bar').textContent = text;
+}
+
+const _netHist = [], _cpuHist = [];
+
+function updateMetrics(m) {
+    const cpu  = m.cpu  ?? 0;
+    const ram  = m.mem  ?? 0;
+    const disk = m.disk ?? 0;
+    const up   = m.net_up   ?? 0;
+    const dn   = m.net_down ?? 0;
+
+    const cpuEl = document.getElementById('cpu-val');
+    cpuEl.textContent = cpu + '%';
+    cpuEl.className = 'stat-val' + (cpu > 88 ? ' danger' : cpu > 70 ? ' warn' : '');
+
+    document.getElementById('ram-val').textContent = ram + '%';
+    document.getElementById('disk-val').textContent = disk + '%';
+    document.getElementById('net-up').textContent = up.toFixed(1) + ' KB/s';
+    document.getElementById('net-dn').textContent = dn.toFixed(1) + ' KB/s';
+
+    _cpuHist.push(cpu); if (_cpuHist.length > 50) _cpuHist.shift();
+    _netHist.push(dn);  if (_netHist.length > 50) _netHist.shift();
+    drawGraph('graph-cpu', _cpuHist, '#1a6aff');
+    drawGraph('graph-net', _netHist, '#00d4ff');
+}
+
+function updateBridgeStatus(st) {
+    const el = document.getElementById('bridge-status');
+    el.textContent = st;
+    el.className = 'stat-val' + (st === 'ONLINE' ? ' ok' : st === 'OFFLINE' ? '' : ' warn');
+}
+
+function updateWeatherLabel(w) {
+    // displayed on radar ring — handled by JS radar labels
+    window._weather = w;
+}
+
+function renderAlexa(devices) {
+    const c = document.getElementById('alexa-rows');
+    const icons = {LIGHT:'⬡', THERMO:'◎', SWITCH:'◉', AUDIO:'♪'};
+    c.innerHTML = devices.map(d => {
+        const ic  = icons[d.type] || '◈';
+        const val = d.state === 'ON' ? `${d.state} ${d.val}` : 'OFF';
+        const clr = d.state === 'ON' ? 'var(--green)' : 'var(--dim)';
+        return `<div class="stat-row">
+          <span class="stat-key">${ic} ${d.name.substring(0,8)}</span>
+          <span class="stat-val" style="color:${clr}">${val}</span>
+        </div>`;
+    }).join('');
+}
+
+function addLog(msg, level) {
+    const c = document.getElementById('log-container');
+    const div = document.createElement('div');
+    div.className = `log-item log-${level || 'info'}`;
+    div.textContent = msg;
+    c.appendChild(div);
+    const kids = c.children;
+    if (kids.length > 14) kids[0].remove();
+    c.scrollTop = c.scrollHeight;
+}
+
+function drawGraph(id, data, color) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    c.width  = c.offsetWidth  || 160;
+    c.height = 26;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+    if (data.length < 2) return;
+    const mx = Math.max(...data, 1);
+    ctx.beginPath();
+    data.forEach((v, i) => {
+        const x = (i / (data.length - 1)) * c.width;
+        const y = c.height - (v / mx) * (c.height - 2) - 1;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.lineTo(c.width, c.height); ctx.lineTo(0, c.height); ctx.closePath();
+    const g = ctx.createLinearGradient(0, 0, 0, c.height);
+    g.addColorStop(0, color + '44'); g.addColorStop(1, color + '00');
+    ctx.fillStyle = g; ctx.fill();
+}
+
+// ══════════════════════════════════
+// CLOCK
+// ══════════════════════════════════
+function updateClock() {
+    const now    = new Date();
+    const days   = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    document.getElementById('day-num').textContent   = now.getDate();
+    document.getElementById('month-name').textContent = months[now.getMonth()];
+    document.getElementById('dow-name').textContent   = days[now.getDay()];
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════
+// SPINNING LOGO
+// ══════════════════════════════════
+(function() {
+    const c = document.getElementById('logo');
+    const ctx = c.getContext('2d');
+    let angle = 0;
+    function draw() {
+        ctx.clearRect(0,0,48,48);
+        const cx = 24, cy = 24, r = 20;
+        const n = 14;
+        ctx.strokeStyle = '#0099bb'; ctx.lineWidth = 1.5;
+        for (let i = 0; i < n; i++) {
+            const a1 = angle + (i/n)*Math.PI*2;
+            const a2 = angle + ((i+0.55)/n)*Math.PI*2;
+            ctx.beginPath();
+            ctx.moveTo(cx + r*Math.cos(a1), cy + r*Math.sin(a1));
+            ctx.lineTo(cx + r*Math.cos(a2), cy + r*Math.sin(a2));
+            ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(cx,cy,11,0,Math.PI*2);
+        ctx.strokeStyle='#003d55'; ctx.lineWidth=1; ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx,cy,4,0,Math.PI*2);
+        ctx.fillStyle='#00d4ff'; ctx.fill();
+        angle += 0.04;
+        requestAnimationFrame(draw);
+    }
+    draw();
+})();
+
+// ══════════════════════════════════
+// VU METER
+// ══════════════════════════════════
+(function() {
+    const barColors = ['#00ff88','#00ff88','#00ff88','#1a6aff','#1a6aff','#1a6aff','#ff2244','#ff2244'];
+    ['vu-top','vu-bot'].forEach(id => {
+        const el = document.getElementById(id);
+        for (let i = 0; i < 8; i++) {
+            const b = document.createElement('div');
+            b.className = 'vu-bar';
+            b.style.background = barColors[i];
+            el.appendChild(b);
+        }
+    });
+    setInterval(() => {
+        const level = Math.floor(Math.random() * 9);
+        ['vu-top','vu-bot'].forEach(id => {
+            const bars = document.getElementById(id).children;
+            for (let i = 0; i < bars.length; i++)
+                bars[i].style.opacity = i < level ? '1' : '0.12';
+        });
+    }, 150);
+})();
+
+// ══════════════════════════════════
+// RADAR CANVAS
+// ══════════════════════════════════
+(function() {
+    const radar = document.getElementById('radar');
+    const ctx   = radar.getContext('2d');
+    let rw, rh, rcx, rcy, rR;
+    let radarAngle = 0, rotAngle = 0;
+
+    function resize() {
+        rw = radar.offsetWidth; rh = radar.offsetHeight;
+        radar.width = rw; radar.height = rh;
+        rcx = rw/2; rcy = rh/2;
+        rR  = Math.min(rcx,rcy) - 30;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const BLIPS = [{a:0.8,r:0.62},{a:2.3,r:0.78},{a:4.1,r:0.45},{a:5.2,r:0.85}];
+    const GRID  = '#0a1820';
+    const SEG_FILLS = ['#0d2535','#0a1a28','#0d2040','#0a1a28','#0d2535','#081422','#0a1830','#0a1a28'];
+    const TRAIL = ['#00d4ff44','#00d4ff33','#00d4ff28','#00d4ff1e','#00d4ff14','#00d4ff0e','#00d4ff08','#00d4ff05'];
+
+    function draw() {
+        ctx.clearRect(0,0,rw,rh);
+        const t = Date.now()/1000;
+
+        // Grid
+        ctx.strokeStyle=GRID; ctx.lineWidth=1;
+        for(let i=0;i<rw;i+=50){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,rh);ctx.stroke();}
+        for(let i=0;i<rh;i+=50){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(rw,i);ctx.stroke();}
+
+        // Outer rings
+        [[0,'#0d2535',1],[22,'#0d3040',1],[40,'#103a50',1.5],[58,'#0d2535',1]].forEach(([off,clr,w])=>{
+            const r=rR-off;
+            ctx.beginPath(); ctx.arc(rcx,rcy,r,0,Math.PI*2);
+            ctx.strokeStyle=clr; ctx.lineWidth=w; ctx.stroke();
+        });
+
+        // Tick marks
+        const rTick = rR-62;
+        for(let i=0;i<72;i++){
+            const ang=(i/72)*Math.PI*2-Math.PI/2;
+            const major=i%9===0, mid=i%3===0;
+            const len=major?16:mid?8:4;
+            ctx.beginPath();
+            ctx.moveTo(rcx+rTick*Math.cos(ang),rcy+rTick*Math.sin(ang));
+            ctx.lineTo(rcx+(rTick-len)*Math.cos(ang),rcy+(rTick-len)*Math.sin(ang));
+            ctx.strokeStyle=major?'#0099bb':mid?'#003d55':'#002030';
+            ctx.lineWidth=major?2:1; ctx.stroke();
+        }
+
+        // Degree labels
+        for(let d=0;d<360;d+=45){
+            const ang=(d-90)*Math.PI/180;
+            const tx=rcx+(rR-18)*Math.cos(ang), ty=rcy+(rR-18)*Math.sin(ang);
+            ctx.fillStyle='#006478'; ctx.font='7px "Courier New"';
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(d+'°',tx,ty);
+        }
+
+        // CW rotating dashed blue ring
+        rotAngle += 0.006;
+        const rRot=rR-30, n=20;
+        for(let i=0;i<n;i++){
+            const a1=rotAngle+(i/n)*Math.PI*2, a2=rotAngle+((i+0.55)/n)*Math.PI*2;
+            ctx.beginPath();
+            ctx.moveTo(rcx+rRot*Math.cos(a1),rcy+rRot*Math.sin(a1));
+            ctx.lineTo(rcx+rRot*Math.cos(a2),rcy+rRot*Math.sin(a2));
+            ctx.strokeStyle=i%2===0?'rgba(26,106,255,0.5)':'#003d55';
+            ctx.lineWidth=1; ctx.stroke();
+        }
+
+        // CCW ring
+        const rCcw=rR-48;
+        for(let i=0;i<n;i++){
+            const a1=-rotAngle*0.7+(i/n)*Math.PI*2, a2=-rotAngle*0.7+((i+0.4)/n)*Math.PI*2;
+            ctx.beginPath();
+            ctx.moveTo(rcx+rCcw*Math.cos(a1),rcy+rCcw*Math.sin(a1));
+            ctx.lineTo(rcx+rCcw*Math.cos(a2),rcy+rCcw*Math.sin(a2));
+            ctx.strokeStyle='#003d55'; ctx.lineWidth=1; ctx.stroke();
+        }
+
+        // 8 pie segments
+        const segR=rR-78;
+        for(let i=0;i<8;i++){
+            const a1=-Math.PI/2+(i/8)*Math.PI*2+0.04;
+            const a2=-Math.PI/2+((i+1)/8)*Math.PI*2-0.04;
+            ctx.beginPath(); ctx.moveTo(rcx,rcy);
+            ctx.arc(rcx,rcy,segR,a1,a2); ctx.closePath();
+            ctx.fillStyle=SEG_FILLS[i]; ctx.fill();
+            ctx.beginPath(); ctx.arc(rcx,rcy,segR,a1,a2);
+            ctx.strokeStyle='rgba(0,153,187,0.25)'; ctx.lineWidth=1; ctx.stroke();
+        }
+
+        // Inner dark disc
+        const rIn=rR-110;
+        ctx.beginPath(); ctx.arc(rcx,rcy,rIn,0,Math.PI*2);
+        ctx.fillStyle='#070a0e'; ctx.fill();
+        ctx.strokeStyle='#0099bb'; ctx.lineWidth=1.5; ctx.stroke();
+
+        // Crosshair
+        [0,Math.PI/2,Math.PI,3*Math.PI/2].forEach(a=>{
+            ctx.beginPath(); ctx.moveTo(rcx,rcy);
+            ctx.lineTo(rcx+rIn*Math.cos(a),rcy+rIn*Math.sin(a));
+            ctx.strokeStyle='#001a25'; ctx.lineWidth=1; ctx.stroke();
+        });
+
+        // Sweep trail
+        radarAngle += 0.018;
+        const sweepR=rIn-4;
+        for(let i=0;i<30;i++){
+            const a=radarAngle-(i/30)*1.2;
+            const ci=Math.min(Math.floor(i/4),TRAIL.length-1);
+            ctx.beginPath(); ctx.moveTo(rcx,rcy);
+            ctx.arc(rcx,rcy,sweepR,a-0.06,a+0.06); ctx.closePath();
+            ctx.fillStyle=TRAIL[ci]; ctx.fill();
+        }
+        ctx.beginPath(); ctx.moveTo(rcx,rcy);
+        ctx.lineTo(rcx+sweepR*Math.cos(radarAngle),rcy+sweepR*Math.sin(radarAngle));
+        ctx.strokeStyle='#00d4ff'; ctx.lineWidth=1.5; ctx.stroke();
+
+        // Blips
+        BLIPS.forEach(b=>{
+            const bx=rcx+sweepR*b.r*Math.cos(b.a), by=rcy+sweepR*b.r*Math.sin(b.a);
+            const diff=((radarAngle-b.a)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+            const af=Math.max(0,1-diff/2);
+            if(af>0.05){
+                const g=Math.round(255*af), gb=Math.round(136*af);
+                ctx.beginPath(); ctx.arc(bx,by,3+af*2,0,Math.PI*2);
+                ctx.fillStyle=`rgb(0,${g},${gb})`; ctx.fill();
+            }
+        });
+
+        // Arc reactor (pulse)
+        const pulse=1+0.06*Math.sin(t*3.5);
+        [[38,'#001a28',false],[26,'#003d55',false],[16,'#0099bb',false],[8,'#00d4ff',true]].forEach(([r,clr,fill])=>{
+            const pr=Math.round(r*pulse);
+            ctx.beginPath(); ctx.arc(rcx,rcy,pr,0,Math.PI*2);
+            if(fill){ctx.fillStyle=clr; ctx.fill();}
+            else{ctx.strokeStyle=clr; ctx.lineWidth=2; ctx.stroke();}
+        });
+
+        // Glow
+        [[44,18],[54,10],[66,5],[80,2]].forEach(([gr,gi])=>{
+            const h=Math.min(255,gi*14);
+            ctx.beginPath(); ctx.arc(rcx,rcy,gr,0,Math.PI*2);
+            ctx.strokeStyle=`rgb(0,${Math.min(255,gi*13)},${h})`;
+            ctx.lineWidth=2; ctx.stroke();
+        });
+
+        // Status text
+        const statusEl = document.getElementById('top-status');
+        const statusTxt = statusEl ? statusEl.textContent.replace('● ','') : '';
+        ctx.fillStyle='#00d4ff'; ctx.font='bold 11px "Courier New"';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(statusTxt, rcx, rcy-rIn-14);
+
+        // Quick info ring labels
+        const now = new Date();
+        const hm  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const w   = window._weather || {};
+        const m   = window._latestMetrics || {};
+        [
+            [0,   `CPU ${m.cpu||0}%`],
+            [90,  w.temp || '--'],
+            [180, hm],
+            [270, `↓${(m.net_down||0).toFixed(0)}KB`],
+        ].forEach(([deg,txt])=>{
+            const ang=(deg-90)*Math.PI/180;
+            const tx=rcx+(rR+20)*Math.cos(ang), ty=rcy+(rR+20)*Math.sin(ang);
+            ctx.fillStyle='#003d55'; ctx.font='7px "Courier New"';
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(txt,tx,ty);
+        });
+
+        // Corner brackets
+        const sz=20, gap=6;
+        [[gap,gap,1,1],[rw-gap,gap,-1,1],[gap,rh-gap,1,-1],[rw-gap,rh-gap,-1,-1]].forEach(([bx,by,dx,dy])=>{
+            ctx.strokeStyle='#0099bb'; ctx.lineWidth=2;
+            ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+dx*sz,by); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx,by+dy*sz); ctx.stroke();
+            ctx.strokeStyle='#003d55'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(bx+dx*5,by+dy*5); ctx.lineTo(bx+dx*11,by+dy*5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(bx+dx*5,by+dy*5); ctx.lineTo(bx+dx*5,by+dy*11); ctx.stroke();
+        });
+
+        requestAnimationFrame(draw);
+    }
+    draw();
+})();
+
+// ══════════════════════════════════
+// COMMAND INPUT
+// ══════════════════════════════════
+document.getElementById('cmd-send').addEventListener('click', () => {
+    const input = document.getElementById('cmd-input');
+    const text  = input.value.trim();
+    if (text) {
+        send({ type: 'command', text });
+        addLog(`▸ SIR: ${text}`, 'cmd');
+        input.value = '';
+    }
+});
+document.getElementById('cmd-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('cmd-send').click();
+});
+
+// Cache latest metrics for radar labels
+window.addEventListener('message', () => {});
+function patchMetrics(m) { window._latestMetrics = m; }
+
+// Hook into handleMessage to patch metrics
+const _origHandle = handleMessage;
+function handleMessage(msg) {
+    _origHandle(msg);
+    if (msg.type === 'metrics' && msg.metrics) patchMetrics(msg.metrics);
+    if (msg.type === 'init' && msg.metrics)    patchMetrics(msg.metrics);
+}
+
+// Connect
+connect();
+</script>
+</body>
+</html>

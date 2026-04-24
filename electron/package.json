@@ -1,0 +1,12 @@
+{
+  "name": "jarvis-hud",
+  "version": "4.0.0",
+  "description": "J.A.R.V.I.S HUD — Electron frontend",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^29.0.0"
+  }
+}
