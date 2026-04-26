@@ -8,14 +8,15 @@ Usage:
     python jarvis_backend.py
 """
 
+# load_dotenv() must run before any other import that reads env vars
+from dotenv import load_dotenv
+load_dotenv()
+
 import asyncio, os, sys, subprocess, threading, time, datetime, math, random, json
 import speech_recognition as sr
 import sounddevice as sd
 import numpy as np
 from scipy.io import wavfile
-from dotenv import load_dotenv
-
-load_dotenv()
 
 import edge_tts
 import google.generativeai as genai
@@ -167,45 +168,55 @@ def play_prerendered():
 _music_file = None
 
 def prepare_music():
+    """Convert intro.webm → intro_converted.mp3 via ffmpeg for smooth pygame fadeout.
+    Skips conversion if the mp3 already exists. Falls back to the raw file if ffmpeg
+    is unavailable."""
     global _music_file
     import subprocess as sp
-    for name in [INTRO_FILE, "intro.mp3", "intro.wav", "intro.webm"]:
-        if not os.path.exists(name):
-            continue
-        if name.endswith(".wav"):
-            _music_file = name
-            return
-        out_wav = "intro_converted.wav"
-        if os.path.exists(out_wav):
-            _music_file = out_wav
-            return
-        try:
-            r = sp.run(
-                ["ffmpeg", "-y", "-i", name,
-                 "-ar", "44100", "-ac", "2", "-sample_fmt", "s16", out_wav],
-                capture_output=True, timeout=30
-            )
-            if r.returncode == 0:
-                _music_file = out_wav
-                print("[MUSIC] Converted to WAV.")
-                return
-        except FileNotFoundError:
-            print("[MUSIC] ffmpeg not found, trying mp3.")
-        out_mp3 = "intro_converted.mp3"
-        if os.path.exists(out_mp3):
-            _music_file = out_mp3
-            return
-        try:
-            r = sp.run(["ffmpeg", "-y", "-i", name, "-q:a", "2", out_mp3],
-                       capture_output=True, timeout=30)
-            if r.returncode == 0:
-                _music_file = out_mp3
-                return
-        except Exception:
-            pass
-        _music_file = name
+
+    # Already-converted mp3 takes priority (avoids re-encoding on every run)
+    OUT_MP3 = "intro_converted.mp3"
+    if os.path.exists(OUT_MP3):
+        _music_file = OUT_MP3
+        print(f"[MUSIC] Using cached: {OUT_MP3}")
         return
-    _music_file = None
+
+    # Find the source file
+    source = None
+    for name in [INTRO_FILE, "intro.webm", "intro.mp3", "intro.wav"]:
+        if os.path.exists(name):
+            source = name
+            break
+
+    if source is None:
+        print("[MUSIC] No intro file found.")
+        _music_file = None
+        return
+
+    # If source is already mp3/wav, use it directly — no conversion needed
+    if source.endswith((".mp3", ".wav")):
+        _music_file = source
+        print(f"[MUSIC] Using: {source}")
+        return
+
+    # Convert webm (or other) → mp3 with ffmpeg
+    try:
+        r = sp.run(
+            ["ffmpeg", "-y", "-i", source, "-q:a", "2", OUT_MP3],
+            capture_output=True, timeout=60,
+        )
+        if r.returncode == 0:
+            _music_file = OUT_MP3
+            print(f"[MUSIC] Converted {source} → {OUT_MP3}")
+            return
+        print(f"[MUSIC] ffmpeg error: {r.stderr.decode(errors='replace')[:120]}")
+    except FileNotFoundError:
+        print("[MUSIC] ffmpeg not found — using source file directly.")
+    except Exception as e:
+        print(f"[MUSIC] Conversion failed: {e}")
+
+    # Last resort: play the source as-is (may not fade smoothly)
+    _music_file = source
 
 def start_music():
     if not _music_file:
