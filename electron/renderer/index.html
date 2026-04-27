@@ -240,6 +240,120 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
 }
 .agent-badge.flash{ animation:agent-flash 0.5s ease-out; }
 
+/* ── OVERLAYS ── */
+.overlay{
+  position:fixed; inset:0; z-index:1000;
+  background:rgba(7,10,14,0.96);
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(3px);
+}
+/* Claude Code modal */
+.modal-panel{
+  width:700px; max-width:92vw;
+  background:var(--panel); border:1px solid var(--blue2);
+  display:flex; flex-direction:column;
+}
+.modal-header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 16px; border-bottom:1px solid var(--border);
+  font-size:10px; letter-spacing:3px; color:var(--blue);
+}
+.modal-close{
+  cursor:pointer; color:var(--dim); font-size:11px; letter-spacing:0;
+  padding:2px 8px; border:1px solid transparent; transition:all 0.15s;
+}
+.modal-close:hover{ color:var(--red); border-color:var(--red); }
+.modal-body{ padding:16px; display:flex; flex-direction:column; gap:10px; }
+.modal-textarea{
+  width:100%; height:110px; resize:vertical;
+  background:rgba(0,0,0,0.4); border:1px solid var(--cyan3);
+  color:var(--white); font-family:'Courier New',monospace; font-size:10px;
+  padding:10px; outline:none; line-height:1.5;
+}
+.modal-textarea:focus{ border-color:var(--blue); }
+.modal-actions{ display:flex; align-items:center; gap:12px; }
+.modal-btn{
+  padding:6px 22px; font-family:'Courier New',monospace;
+  font-size:9px; letter-spacing:2px; cursor:pointer;
+  background:rgba(26,106,255,0.12); border:1px solid var(--blue2);
+  color:var(--blue); transition:all 0.15s;
+}
+.modal-btn:hover{ background:rgba(26,106,255,0.28); color:var(--white); }
+.modal-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+.modal-stat{ font-size:8px; letter-spacing:2px; color:var(--dim); }
+.modal-result{
+  min-height:80px; max-height:280px; overflow-y:auto;
+  background:rgba(0,0,0,0.35); border:1px solid var(--border);
+  padding:10px; font-size:9px; color:var(--white);
+  line-height:1.6; white-space:pre-wrap; word-break:break-word;
+}
+.modal-hint{ font-size:7px; color:var(--cyan3); letter-spacing:1px; }
+
+/* AI Agents panel */
+.agents-panel{
+  width:97vw; max-width:1240px; height:88vh;
+  background:var(--panel); border:1px solid var(--cyan3);
+  display:flex; flex-direction:column;
+}
+.agents-title-bar{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 20px; border-bottom:1px solid var(--border);
+}
+.agents-title{ font-size:11px; letter-spacing:4px; color:var(--cyan); }
+.agents-subtitle{ font-size:8px; letter-spacing:2px; color:var(--dim); margin-top:2px; }
+.agents-close{
+  font-size:9px; letter-spacing:2px; color:var(--dim);
+  cursor:pointer; padding:4px 12px; border:1px solid var(--border);
+  transition:all 0.15s; user-select:none;
+}
+.agents-close:hover{ color:var(--red); border-color:var(--red); }
+.agents-grid{
+  display:grid; grid-template-columns:repeat(5,1fr);
+  gap:16px; padding:20px; flex:1; overflow-y:auto; align-items:start;
+}
+.agent-card{
+  background:rgba(7,10,14,0.9);
+  border:1px solid var(--border);
+  border-top:3px solid var(--ac,var(--dim));
+  padding:14px 12px; cursor:pointer;
+  transition:all 0.2s; display:flex; flex-direction:column; gap:8px;
+}
+.agent-card:hover{ background:rgba(10,15,20,0.98); border-color:var(--ac,var(--dim)); }
+.agent-card.active{
+  border-color:var(--ac,var(--cyan));
+  box-shadow:0 0 20px color-mix(in srgb, var(--ac,var(--cyan)) 25%, transparent);
+}
+.ac-avatar{ font-size:28px; text-align:center; padding:4px 0; }
+.ac-name{ font-size:10px; font-weight:700; letter-spacing:2px; text-align:center; color:var(--ac,var(--white)); }
+.ac-status{ font-size:7px; letter-spacing:2px; text-align:center; color:var(--green); }
+.ac-desc{ font-size:7px; color:var(--dim); text-align:center; line-height:1.5; min-height:32px; }
+.ac-input{
+  width:100%; padding:5px 8px;
+  background:rgba(0,0,0,0.5); border:1px solid var(--border);
+  color:var(--white); font-family:'Courier New',monospace; font-size:9px;
+  outline:none; user-select:text; cursor:text;
+}
+.ac-input:focus{ border-color:var(--ac,var(--cyan)); }
+.ac-send{
+  width:100%; padding:5px; cursor:pointer;
+  background:transparent; border:1px solid var(--border);
+  color:var(--dim); font-family:'Courier New',monospace; font-size:8px;
+  letter-spacing:2px; transition:all 0.15s;
+}
+.ac-send:hover{ border-color:var(--ac,var(--cyan)); color:var(--ac,var(--cyan)); }
+.agents-footer{
+  padding:8px 20px; border-top:1px solid var(--border);
+  font-size:7px; color:var(--cyan3); letter-spacing:2px;
+}
+.lang-badge{
+  display:inline-block; padding:2px 8px;
+  font-size:8px; font-weight:700; letter-spacing:2px;
+  border:1px solid var(--cyan3); color:var(--cyan3);
+  margin-left:6px; transition:all 0.3s; cursor:default;
+}
+.lang-badge.tr{ border-color:var(--orange); color:var(--orange); }
+.lang-badge.en{ border-color:var(--cyan); color:var(--cyan); }
+
 /* Boot animation */
 @keyframes boot-in{ from{ opacity:0; filter:brightness(3) blur(4px); } to{ opacity:1; filter:none; } }
 .hud{ animation:boot-in 1.8s ease-out forwards; }
@@ -281,6 +395,8 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
     <div class="date-dow" id="dow-name">-------</div>
   </div>
   <div class="vdiv"></div>
+  <span class="lang-badge en" id="lang-badge">EN</span>
+  <div class="vdiv"></div>
   <div class="top-status" id="top-status">● OFFLINE</div>
 </div>
 
@@ -295,6 +411,8 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
     <div class="app-item" data-app="claude"><span class="app-plus">+</span><span class="app-icon">⚡</span><span class="app-name">Claude Code</span></div>
     <div class="app-item" data-app="smarthome"><span class="app-plus">+</span><span class="app-icon">🏠</span><span class="app-name">Smart Home</span></div>
     <div class="app-item" data-app="jarvis_ai"><span class="app-plus">+</span><span class="app-icon">🧠</span><span class="app-name">JARVIS A.I.</span></div>
+    <div class="app-item" id="btn-agents-panel"><span class="app-plus">◈</span><span class="app-icon">🤖</span><span class="app-name">AI AGENTS</span></div>
+    <div class="app-item" id="btn-claude-modal"><span class="app-plus">⚡</span><span class="app-icon">⌨</span><span class="app-name">CLAUDE TASK</span></div>
   </div>
   <div class="log-section">
     <div class="log-title">ACTIVITY LOG</div>
@@ -372,6 +490,44 @@ canvas#radar{ position:absolute; inset:0; width:100%; height:100%; }
 </div>
 
 </div><!-- .hud -->
+
+<!-- ══ CLAUDE CODE MODAL (T to open) ══ -->
+<div class="overlay" id="claude-modal" style="display:none">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <span>⚡ CLAUDE CODE — REMOTE TASK INTERFACE</span>
+      <span class="modal-close" id="claude-modal-close">✕ CLOSE</span>
+    </div>
+    <div class="modal-body">
+      <textarea class="modal-textarea" id="claude-task-input"
+        placeholder="Enter a coding task to send via SSH to the remote Claude Code machine..."></textarea>
+      <div class="modal-actions">
+        <button class="modal-btn" id="claude-submit">SEND TO CLAUDE</button>
+        <span class="modal-stat" id="claude-modal-stat">READY — SSH BRIDGE</span>
+      </div>
+      <div class="modal-result" id="claude-result">Awaiting task, Sir.</div>
+      <div class="modal-hint">Press T to open · ESC to close · Enter in textarea to send</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AI AGENTS PANEL ══ -->
+<div class="overlay" id="agents-overlay" style="display:none">
+  <div class="agents-panel">
+    <div class="agents-title-bar">
+      <div>
+        <div class="agents-title">◈ AI AGENT NETWORK — MARK IV</div>
+        <div class="agents-subtitle">CLICK AGENT TO LOCK ROUTING · DIRECT TASK INPUT AVAILABLE</div>
+      </div>
+      <div class="agents-close" id="agents-close">✕ CLOSE PANEL</div>
+    </div>
+    <div class="agents-grid" id="agents-grid"><!-- rendered by JS --></div>
+    <div class="agents-footer">
+      ACTIVE AGENT: <strong id="agents-footer-active">AUTO-ROUTE</strong>
+      &nbsp;·&nbsp; Click agent again to deactivate lock
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════
@@ -466,6 +622,29 @@ function handleMessage(msg) {
         case 'action_result':
             addLog(msg.ok ? `✓ ${msg.msg}` : `✗ ${msg.msg}`, msg.ok ? 'ok' : 'warn');
             if (msg.speech) setSpeech(msg.speech);
+            break;
+        case 'claude_status':
+            document.getElementById('claude-modal-stat').textContent = msg.status;
+            break;
+        case 'claude_response':
+            document.getElementById('claude-modal-stat').textContent = msg.ok ? 'COMPLETE' : 'ERROR';
+            document.getElementById('claude-result').textContent = msg.output || '(no output)';
+            document.getElementById('claude-submit').disabled = false;
+            addLog(msg.ok ? `✓ Claude: ${String(msg.output).substring(0,50)}` : `✗ Bridge error`, msg.ok ? 'ok' : 'warn');
+            break;
+        case 'agent_locked':
+            _forcedAgent = msg.agent || null;
+            document.getElementById('agents-footer-active').textContent = _forcedAgent || 'AUTO-ROUTE';
+            document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+            if (_forcedAgent) {
+                document.getElementById(`card-${_forcedAgent.replace(/ /g,'-')}`)?.classList.add('active');
+                addLog(`▸ Agent locked: ${_forcedAgent}`, 'ok');
+            }
+            break;
+        case 'lang':
+            const badge = document.getElementById('lang-badge');
+            badge.textContent = msg.lang;
+            badge.className = 'lang-badge ' + msg.lang.toLowerCase();
             break;
     }
 }
@@ -885,6 +1064,115 @@ document.querySelectorAll('[data-syscmd]').forEach(el => {
         addLog(`▸ SYSTEM: ${cmd.toUpperCase()}`, 'warn');
     });
 });
+
+// ══════════════════════════════════
+// MODAL HELPERS
+// ══════════════════════════════════
+function openOverlay(id) { document.getElementById(id).style.display = 'flex'; }
+function closeOverlay(id) { document.getElementById(id).style.display = 'none'; }
+function closeAllOverlays() {
+    document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
+}
+
+document.addEventListener('keydown', e => {
+    if (document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') { closeAllOverlays(); e.target.blur(); }
+        return;
+    }
+    if (e.key === 't' || e.key === 'T') openOverlay('claude-modal');
+    if (e.key === 'Escape') closeAllOverlays();
+});
+
+// ── Claude Code Modal ──────────────────────────────────────
+document.getElementById('btn-claude-modal').addEventListener('click', () => openOverlay('claude-modal'));
+document.getElementById('claude-modal-close').addEventListener('click', () => closeOverlay('claude-modal'));
+
+document.getElementById('claude-submit').addEventListener('click', submitClaudeTask);
+document.getElementById('claude-task-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) submitClaudeTask();
+});
+
+function submitClaudeTask() {
+    const prompt = document.getElementById('claude-task-input').value.trim();
+    if (!prompt) return;
+    document.getElementById('claude-submit').disabled = true;
+    document.getElementById('claude-modal-stat').textContent = 'SENDING VIA SSH...';
+    document.getElementById('claude-result').textContent = '';
+    send({ type: 'action', action: 'claude_task', prompt });
+}
+
+// ══════════════════════════════════
+// AI AGENTS PANEL
+// ══════════════════════════════════
+const AGENTS_DEF = [
+    { id:'CODING',      icon:'⌨',  color:'#1a6aff', desc:'Code generation, debugging & SSH→Claude Code bridge' },
+    { id:'SMART HOME',  icon:'🏠', color:'#00ff88', desc:'Alexa device control, lighting & thermostat' },
+    { id:'RESEARCH',    icon:'🔍', color:'#00d4ff', desc:'Web search, Wikipedia & knowledge queries' },
+    { id:'SOCIAL',      icon:'📢', color:'#cc66ff', desc:'Twitter, LinkedIn & Instagram post drafting' },
+    { id:'CALENDAR',    icon:'📅', color:'#ff6a00', desc:'Reminders, schedule & appointments' },
+];
+
+let _forcedAgent = null;
+
+function renderAgents() {
+    const grid = document.getElementById('agents-grid');
+    grid.innerHTML = AGENTS_DEF.map(a => {
+        const cardId  = `card-${a.id.replace(/ /g,'-')}`;
+        const inputId = `task-${a.id.replace(/ /g,'-')}`;
+        const isActive = _forcedAgent === a.id;
+        return `
+        <div class="agent-card${isActive?' active':''}" id="${cardId}" data-agent="${a.id}"
+             style="--ac:${a.color}">
+          <div class="ac-avatar">${a.icon}</div>
+          <div class="ac-name">${a.id}</div>
+          <div class="ac-status">● ONLINE</div>
+          <div class="ac-desc">${a.desc}</div>
+          <input class="ac-input" id="${inputId}" placeholder="Direct task..." />
+          <button class="ac-send" data-agent="${a.id}">▸ SEND TASK</button>
+        </div>`;
+    }).join('');
+
+    // Card click → lock/unlock routing to this agent
+    grid.querySelectorAll('.agent-card').forEach(card => {
+        card.addEventListener('click', e => {
+            if (e.target.classList.contains('ac-input') ||
+                e.target.classList.contains('ac-send')) return;
+            const name     = card.dataset.agent;
+            const isActive = card.classList.contains('active');
+            send({ type:'action', action:'set_active_agent', agent: isActive ? '' : name });
+        });
+    });
+
+    // Send-task buttons
+    grid.querySelectorAll('.ac-send').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const name  = btn.dataset.agent;
+            const input = document.getElementById(`task-${name.replace(/ /g,'-')}`);
+            const task  = input?.value.trim();
+            if (!task) return;
+            send({ type:'action', action:'agent_task', agent:name, task });
+            addLog(`▸ ${name}: ${task.substring(0,45)}`, 'cmd');
+            input.value = '';
+        });
+    });
+
+    // Enter in task inputs triggers the send button
+    grid.querySelectorAll('.ac-input').forEach(input => {
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                input.closest('.agent-card')?.querySelector('.ac-send')?.click();
+            }
+        });
+    });
+}
+
+document.getElementById('btn-agents-panel').addEventListener('click', () => {
+    renderAgents();
+    openOverlay('agents-overlay');
+});
+document.getElementById('agents-close').addEventListener('click', () => closeOverlay('agents-overlay'));
 
 // Connect
 connect();

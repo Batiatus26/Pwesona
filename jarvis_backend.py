@@ -39,6 +39,12 @@ try:
 except ImportError:
     REQUESTS_OK = False
 
+try:
+    from langdetect import detect as _langdetect
+    LANGDETECT_OK = True
+except ImportError:
+    LANGDETECT_OK = False
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -49,7 +55,9 @@ import agents
 #  CONFIG
 # ══════════════════════════════════════════════════════════════
 API_KEY         = os.environ["GEMINI_API_KEY"]
-VOICE           = "en-GB-RyanNeural"
+VOICE_EN        = "en-GB-RyanNeural"
+VOICE_TR        = "tr-TR-AhmetNeural"
+VOICE           = VOICE_EN            # default; updated per-command by detect_lang()
 INTRO_FILE      = "intro.webm"
 WAKE_WORD       = "wake up"
 LANGUAGE        = "en-US"
@@ -68,10 +76,9 @@ SSH_CLAUDE   = os.getenv("SSH_CLAUDE", "claude")
 SYSTEM_PROMPT = """You are J.A.R.V.I.S. (Just A Rather Very Intelligent System),
 the AI assistant of Tony Stark / Iron Man.
 - Polite, efficient, slightly witty British butler tone
-- Address the user as "Sir" or "Efendim" depending on language
+- If the user speaks English: respond ONLY in English, address as "Sir"
+- If the user speaks Turkish: respond ONLY in Turkish, address as "efendim"
 - Keep responses concise (2-4 sentences) unless asked for more
-- Bilingual: Turkish input → respond BOTH English then "/ Türkçe: ..."
-- English only input → English only response
 - Location: Toppenstedt, Lower Saxony, Germany
 - Date: {date}
 Never break character."""
@@ -93,7 +100,21 @@ def get_chat():
         ])
     return _chat
 
+_current_lang = "en"   # updated per-command; read by ask_gemini for language steering
+
+def detect_lang(text: str) -> str:
+    """Returns 'tr' or 'en'. Falls back to 'en' on any error."""
+    if not LANGDETECT_OK or len(text.strip()) < 4:
+        return "en"
+    try:
+        lang = _langdetect(text)
+        return "tr" if lang == "tr" else "en"
+    except Exception:
+        return "en"
+
 def ask_gemini(text: str) -> str:
+    if _current_lang == "tr":
+        text = f"[Tamamen Türkçe yanıt ver, kullanıcıya 'efendim' diye hitap et, JARVIS karakterinde kal] {text}"
     try:
         return get_chat().send_message(text).text.strip()
     except Exception as e:
@@ -104,9 +125,9 @@ def ask_gemini(text: str) -> str:
 # ══════════════════════════════════════════════════════════════
 _speak_lock = threading.Lock()
 
-async def _tts_async(text: str):
+async def _tts_async(text: str, voice: str = VOICE_EN):
     path = os.path.abspath("jarvis_response.mp3")
-    await edge_tts.Communicate(text, VOICE).save(path)
+    await edge_tts.Communicate(text, voice).save(path)
     if PYGAME_OK:
         try:
             pygame.mixer.init()
@@ -122,12 +143,12 @@ async def _tts_async(text: str):
     except Exception:
         pass
 
-def speak(text: str):
+def speak(text: str, voice: str = VOICE_EN):
     with _speak_lock:
-        asyncio.run(_tts_async(text))
+        asyncio.run(_tts_async(text, voice))
 
-def speak_async(text: str):
-    t = threading.Thread(target=speak, args=(text,), daemon=True)
+def speak_async(text: str, voice: str = VOICE_EN):
+    t = threading.Thread(target=speak, args=(text, voice), daemon=True)
     t.start()
     return t
 
@@ -396,7 +417,8 @@ class ClaudeCodeBridge:
             self._client = None
         self.status = "OFFLINE"
 
-_bridge = ClaudeCodeBridge()
+_bridge       = ClaudeCodeBridge()
+_forced_agent: str = ""   # empty = auto-route; set by set_active_agent action
 
 # ── Boot agents ───────────────────────────────────────────────
 agents.init(ask_gemini, _bridge, _reminders, _alexa_devices)
@@ -577,13 +599,33 @@ def _command_loop():
 
 
 def _handle_command(text: str):
+    global _current_lang
     _set_status("PROCESSING")
     _add_log(f"SIR: {text[:45]}", "cmd")
     _add_conv("SIR", text)
     _set_speech(f"Processing: {text[:80]}...")
     mgr.broadcast_sync({"type": "user_text", "text": text})
 
-    agent_name, reply, agent_icon = _router.route(text)
+    # Detect language; steer Gemini and TTS accordingly
+    _current_lang = detect_lang(text)
+    voice = VOICE_TR if _current_lang == "tr" else VOICE_EN
+    mgr.broadcast_sync({"type": "lang", "lang": _current_lang.upper()})
+
+    # Route: forced agent takes priority over auto-routing
+    if _forced_agent:
+        agent_name, reply, agent_icon = None, None, "◈"
+        for ag in _router.agents:
+            if ag.name == _forced_agent:
+                try:
+                    reply = ag.handle(text)
+                except Exception as e:
+                    reply = f"Agent error, Sir: {e}"
+                agent_name, agent_icon = ag.name, ag.icon
+                break
+        if agent_name is None:
+            agent_name, reply, agent_icon = _router.route(text)
+    else:
+        agent_name, reply, agent_icon = _router.route(text)
 
     _set_status("SPEAKING")
     _add_log(f"{agent_name}: {reply[:45]}", "reply")
@@ -591,7 +633,7 @@ def _handle_command(text: str):
     _set_speech(reply)
     mgr.broadcast_sync({"type": "agent", "agent": agent_name, "icon": agent_icon})
 
-    speak_async(reply).join()
+    speak_async(reply, voice).join()
 
     _set_status("LISTENING")
     _set_speech("Awaiting your command, Sir.")
@@ -733,6 +775,51 @@ async def _handle_action(msg: dict):
                 "ok":   True,
                 "msg":  f"SYSTEM: {cmd.upper()} initiated",
             })
+
+    elif action == "claude_task":
+        prompt = msg.get("prompt", "").strip()
+        if prompt:
+            def _run_claude_task():
+                _add_log(f"Claude task: {prompt[:45]}", "cmd")
+                mgr.broadcast_sync({"type": "claude_status", "status": "RUNNING — SSH BRIDGE..."})
+                ok, result = _bridge.run(prompt)
+                mgr.broadcast_sync({
+                    "type":   "claude_response",
+                    "ok":     ok,
+                    "output": result,
+                    "prompt": prompt[:80],
+                })
+                _add_log(f"Claude: {'OK' if ok else 'ERR'} — {result[:45]}", "ok" if ok else "warn")
+            threading.Thread(target=_run_claude_task, daemon=True).start()
+
+    elif action == "set_active_agent":
+        global _forced_agent
+        _forced_agent = msg.get("agent", "").strip()
+        label = _forced_agent or "AUTO-ROUTE"
+        _add_log(f"Agent routing: {label}", "ok")
+        await mgr.broadcast({"type": "agent_locked", "agent": _forced_agent})
+
+    elif action == "agent_task":
+        agent_name = msg.get("agent", "").strip()
+        task       = msg.get("task",  "").strip()
+        if agent_name and task:
+            def _run_agent_task(name=agent_name, text=task):
+                for ag in _router.agents:
+                    if ag.name == name:
+                        _add_log(f"{name} task: {text[:40]}", "cmd")
+                        _set_status("PROCESSING")
+                        try:
+                            reply = ag.handle(text)
+                        except Exception as e:
+                            reply = f"Agent error: {e}"
+                        _set_speech(reply)
+                        _add_log(f"{name}: {reply[:45]}", "reply")
+                        mgr.broadcast_sync({"type": "agent", "agent": name, "icon": ag.icon})
+                        voice = VOICE_TR if _current_lang == "tr" else VOICE_EN
+                        speak_async(reply, voice).join()
+                        _set_status("LISTENING")
+                        return
+            threading.Thread(target=_run_agent_task, daemon=True).start()
 
 
 # Background task: push metrics + weather every 2 seconds
