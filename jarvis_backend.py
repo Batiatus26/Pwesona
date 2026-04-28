@@ -8,8 +8,11 @@ Usage:
     python jarvis_backend.py
 """
 
+import os
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'), override=True)
 
-import asyncio, os, sys, subprocess, threading, time, datetime, math, random, json
+import asyncio, sys, subprocess, threading, time, datetime, math, random, json
 import speech_recognition as sr
 import sounddevice as sd
 import numpy as np
@@ -19,8 +22,6 @@ import edge_tts
 from google import genai
 from google.genai import types
 
-from dotenv import load_dotenv
-load_dotenv()
 
 try:
     import pygame
@@ -55,7 +56,7 @@ import agents
 # ══════════════════════════════════════════════════════════════
 #  CONFIG
 # ══════════════════════════════════════════════════════════════
-API_KEY         = os.environ["GEMINI_API_KEY"]
+API_KEY         = os.getenv("GEMINI_API_KEY") or ""
 VOICE_EN        = "en-GB-RyanNeural"
 VOICE_TR        = "tr-TR-AhmetNeural"
 VOICE           = VOICE_EN            # default; updated per-command by detect_lang()
