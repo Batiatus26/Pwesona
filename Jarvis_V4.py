@@ -39,12 +39,16 @@ except ImportError:
     REQUESTS_OK = False
 
 import edge_tts
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # ══════════════════════════════════════════════════════════════
 #  AYARLAR
 # ══════════════════════════════════════════════════════════════
-API_KEY         = ""
+API_KEY         = os.environ.get("GEMINI_API_KEY", "")
 VOICE           = "en-GB-RyanNeural"
 INTRO_FILE      = "intro.webm"
 WAKE_WORD       = "wake up"
@@ -77,18 +81,19 @@ Never break character."""
 # ══════════════════════════════════════════════════════════════
 #  GEMİNİ
 # ══════════════════════════════════════════════════════════════
-genai.configure(api_key=API_KEY)
-_model = genai.GenerativeModel("gemini-2.5-flash")
+_client = genai.Client(api_key=API_KEY) if API_KEY else None
 _chat  = None
 
 def get_chat():
     global _chat
     if _chat is None:
         today = datetime.datetime.now().strftime("%A, %B %d, %Y")
-        _chat = _model.start_chat(history=[
-            {"role": "user",  "parts": [SYSTEM_PROMPT.format(date=today)]},
-            {"role": "model", "parts": ["Understood, Sir. J.A.R.V.I.S. online."]}
-        ])
+        _chat = _client.chats.create(
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT.format(date=today),
+            )
+        )
     return _chat
 
 def ask_gemini(text):

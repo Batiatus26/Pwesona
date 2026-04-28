@@ -19,7 +19,8 @@ import numpy as np
 from scipy.io import wavfile
 
 import edge_tts
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 try:
     import pygame
@@ -86,18 +87,19 @@ Never break character."""
 # ══════════════════════════════════════════════════════════════
 #  GEMINI
 # ══════════════════════════════════════════════════════════════
-genai.configure(api_key=API_KEY)
-_model = genai.GenerativeModel("gemini-2.5-flash")
+_client = genai.Client(api_key=API_KEY)
 _chat  = None
 
 def get_chat():
     global _chat
     if _chat is None:
         today = datetime.datetime.now().strftime("%A, %B %d, %Y")
-        _chat = _model.start_chat(history=[
-            {"role": "user",  "parts": [SYSTEM_PROMPT.format(date=today)]},
-            {"role": "model", "parts": ["Understood, Sir. J.A.R.V.I.S. online."]}
-        ])
+        _chat = _client.chats.create(
+            model="gemini-2.5-flash",
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT.format(date=today),
+            )
+        )
     return _chat
 
 _current_lang = "en"   # updated per-command; read by ask_gemini for language steering
