@@ -8,9 +8,6 @@ Usage:
     python jarvis_backend.py
 """
 
-# load_dotenv() must run before any other import that reads env vars
-from dotenv import load_dotenv
-load_dotenv()
 
 import asyncio, os, sys, subprocess, threading, time, datetime, math, random, json
 import speech_recognition as sr
@@ -21,6 +18,9 @@ from scipy.io import wavfile
 import edge_tts
 from google import genai
 from google.genai import types
+
+from dotenv import load_dotenv
+load_dotenv()
 
 try:
     import pygame
